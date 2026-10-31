@@ -103,6 +103,9 @@ public:
     /// Return true when a region is modified from the GPU
     [[nodiscard]] bool IsRegionGpuModified(VAddr addr, size_t size);
 
+    /// Return true when a buffer range aliases a GPU-modified image in TextureCache
+    [[nodiscard]] bool HasGpuModifiedImage(VAddr addr, u32 size);
+
     /// Processes the fault buffer.
     void ProcessFaultBuffer();
 

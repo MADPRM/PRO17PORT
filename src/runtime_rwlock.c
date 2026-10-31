@@ -61,10 +61,19 @@ static int create_locked(Rwlock **out) {
     if (e) { runtime_low_free(r); return e; }
     r->next=registry; registry=r; *out=r; ++created; return 0;
 }
+static int default_rw_attr;
+static ABI int32_t rwattr_init(void **attr) {
+    if (!attr) return error(EINVAL);
+    *attr=&default_rw_attr; return 0; /* only default attributes exist */
+}
+static ABI int32_t rwattr_destroy(void **attr) {
+    if (!attr) return error(EINVAL);
+    *attr=NULL; return 0;
+}
 static ABI int32_t rw_init(Rwlock **out, void *const *attr, const char *name) {
     (void)name;
     if (!out || (attr && !*attr)) return error(EINVAL);
-    if (attr) { fputs("STOP: non-default PS4 rwlock attributes are not implemented\n",stderr); exit(21); }
+    if (attr && *attr!=&default_rw_attr) { fputs("STOP: non-default PS4 rwlock attributes are not implemented\n",stderr); exit(21); }
     pthread_mutex_lock(&registry_lock);
     /* POSIX allows uninitialized storage, so never read *out during init. */
     int e=create_locked(out);
@@ -163,6 +172,8 @@ uintptr_t runtime_rwlock_resolve(const char *name) {
     if (!strcmp(name,"+L98PIbGttk#libkernel")) return (uintptr_t)rw_unlock;
     if (!strcmp(name,"iPtZRWICjrM#libkernel")) return (uintptr_t)rw_timedread;
     if (!strcmp(name,"adh--6nIqTk#libkernel")) return (uintptr_t)rw_timedwrite;
+    if (!strcmp(name,"yOfGg-I1ZII#libkernel")) return (uintptr_t)rwattr_init;
+    if (!strcmp(name,"i2ifZ3fS2fo#libkernel")) return (uintptr_t)rwattr_destroy;
     return 0;
 }
 void runtime_rwlock_report(void) {

@@ -313,6 +313,11 @@ void TileManager::TileImage(Image& in_image, std::span<vk::BufferImageCopy> buff
     };
 
     const auto staging = runtime.GetStagingPool().Request(info.guest_size, MemoryType::DeviceLocal);
+    if (buffer_copies.size() == 1 &&
+        (buffer_copies[0].imageExtent.width < buffer_copies[0].bufferRowLength ||
+         buffer_copies[0].imageExtent.height < buffer_copies[0].bufferImageHeight)) {
+        runtime.FillBuffer(staging.buffer, staging.offset, Common::AlignUp(info.guest_size, 4), 0);
+    }
     for (auto& copy : buffer_copies) {
         copy.bufferOffset += staging.offset;
     }

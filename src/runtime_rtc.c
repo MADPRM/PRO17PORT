@@ -144,6 +144,33 @@ static ABI int32_t rtc_rfc2822_local(char *out, const uint64_t *utc_tick) {
     return 0;
 }
 
+static ABI int32_t rtc_parse_rfc3339(uint64_t *utc_tick, const char *str) {
+    if (!utc_tick || !str) return ERR_INVALID_POINTER;
+    unsigned y=1970, m=1, d=1, hh=0, mm=0, ss=0;
+    char tz='Z'; int tzh=0, tzm=0;
+    if (sscanf(str, "%4u-%2u-%2uT%2u:%2u:%2u", &y, &m, &d, &hh, &mm, &ss) < 6 &&
+        sscanf(str, "%4u-%2u-%2u %2u:%2u:%2u", &y, &m, &d, &hh, &mm, &ss) < 6)
+        return (int32_t)0x80B50003;
+    DateTime dt={(uint16_t)y, (uint16_t)m, (uint16_t)d, (uint16_t)hh, (uint16_t)mm, (uint16_t)ss, 0};
+    int32_t e=validate(&dt);
+    if (e) return e;
+    uint64_t tick=to_tick(&dt);
+    const char *p=strchr(str,'T');
+    if (!p) p=strchr(str,' ');
+    if (p) {
+        const char *plus=strchr(p,'+'), *minus=strchr(p,'-');
+        if (plus && sscanf(plus+1,"%2d:%2d",&tzh,&tzm)>=1) tz='+';
+        else if (minus && sscanf(minus+1,"%2d:%2d",&tzh,&tzm)>=1) tz='-';
+    }
+    int64_t off=((int64_t)tzh*3600+(int64_t)tzm*60)*1000000;
+    if (tz=='+') tick=(uint64_t)((int64_t)tick-off);
+    else if (tz=='-') tick=(uint64_t)((int64_t)tick+off);
+    *utc_tick=tick;
+    return 0;
+}
+static ABI int32_t rtc_parse_datetime(uint64_t *utc_tick, const char *str) {
+    return rtc_parse_rfc3339(utc_tick, str);
+}
 static const RuntimeExport exports[]={
     {"sceRtcGetCurrentClockLocalTime",rtc_current_local}, {"sceRtcGetCurrentClock",rtc_current_clock},
     {"sceRtcGetCurrentTick",rtc_current_tick}, {"sceRtcGetCurrentNetworkTick",rtc_current_tick},
@@ -151,5 +178,6 @@ static const RuntimeExport exports[]={
     {"sceRtcGetDayOfWeek",rtc_day_of_week}, {"sceRtcGetTick",rtc_get_tick}, {"sceRtcSetTick",rtc_set_tick},
     {"sceRtcGetTickResolution",rtc_tick_resolution}, {"sceRtcSetTime_t",rtc_set_time_t},
     {"sceRtcGetTime_t",rtc_get_time_t}, {"sceRtcFormatRFC2822LocalTime",rtc_rfc2822_local},
+    {"sceRtcParseRFC3339",rtc_parse_rfc3339}, {"sceRtcParseDateTime",rtc_parse_datetime},
 };
 uintptr_t runtime_rtc_resolve(const char *name) { return RUNTIME_LOOKUP(exports,name); }

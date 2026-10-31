@@ -98,11 +98,11 @@ bool initialized = false;
 // ACCENT, ACCENT_HI), for the menu and the trophy window; gold marks trophies and section titles.
 namespace Ink {
 constexpr ImVec4 Rgb(int r, int g, int b, float a = 1.0f) { return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a); }
-constexpr ImVec4 Bg = Rgb(0x0d, 0x0b, 0x0b), Panel = Rgb(0x16, 0x12, 0x12), Card = Rgb(0x1d, 0x17, 0x17);
-constexpr ImVec4 Line = Rgb(0x2a, 0x22, 0x22), Raised = Rgb(0x34, 0x2a, 0x2a);
-constexpr ImVec4 Text = Rgb(0xe6, 0xe0, 0xd8), Muted = Rgb(0x8a, 0x81, 0x7a);
-constexpr ImVec4 Accent = Rgb(0xa4, 0x16, 0x1a), AccentHi = Rgb(0xc8, 0x1e, 0x25), AccentDeep = Rgb(0x3a, 0x14, 0x16);
-constexpr ImVec4 Gold = Rgb(0xd4, 0xa8, 0x5a);
+constexpr ImVec4 Bg = Rgb(0x0b, 0x0f, 0x17), Panel = Rgb(0x11, 0x18, 0x27), Card = Rgb(0x1e, 0x29, 0x3b);
+constexpr ImVec4 Line = Rgb(0x2d, 0x3b, 0x52), Raised = Rgb(0x3b, 0x4d, 0x6b);
+constexpr ImVec4 Text = Rgb(0xf1, 0xf5, 0xf9), Muted = Rgb(0x94, 0xa3, 0xb8);
+constexpr ImVec4 Accent = Rgb(0xd9, 0x77, 0x06), AccentHi = Rgb(0xfa, 0xcc, 0x15), AccentDeep = Rgb(0x45, 0x27, 0x06);
+constexpr ImVec4 Gold = Rgb(0xfa, 0xcc, 0x15);
 // The grades, as the launcher's Trophies page colours them (TROPHY_TIERS).
 constexpr ImVec4 Bronze = Rgb(0xcd, 0x7f, 0x32), Silver = Rgb(0xc4, 0xc4, 0xc8), GoldGrade = Rgb(0xe0, 0xb4, 0x3a);
 constexpr ImVec4 Platinum = Rgb(0x8f, 0xd3, 0xe8);
@@ -408,31 +408,6 @@ void GameTab() {
         CheckRow("Pause the game", s.pause_game, "The game stops while this menu or the trophy list is open.");
         ImGui::EndTable();
     }
-    Separator("Cheats");
-    if (BeginRows("##cheats")) {
-        static const char* const names[] = {"Infinite health", "Infinite magic", "Infinite item meter",
-                                            "Infinite Rage of Sparta", "Max red orbs",
-                                            "Unlock Very Hard", "Infinite Double Jumps"};
-        static const char* const helps[] = {
-            "Health stays full. Only Kratos is protected. Turning it off does not undo past refills.",
-            "Magic stays full.", "The item meter (bow, Helios' head, boots) stays full.",
-            "Rage of Sparta stays full.", "Red orbs stay at the maximum.",
-            "Enable before opening New Game. Does not change an existing save difficulty.",
-            "Repeat air jumps without landing. Turn off for normal movement."};
-        for (unsigned cheat = 0; cheat < SPARTAN_CHEAT_COUNT; ++cheat) {
-            const bool available = (s.cheats_supported.load() & (1u << cheat)) != 0;
-            ImGui::BeginDisabled(!available);
-            CheckRow(names[cheat], s.cheats[cheat], available ? helps[cheat] : Unsupported);
-            ImGui::EndDisabled();
-        }
-        ImGui::BeginDisabled(!s.qte_supported.load());
-        CheckRow("Automatic QTE", s.auto_qte,
-                 s.qte_supported.load() ? "Quick-time prompts answer themselves: single presses, repeated "
-                                          "presses, holds and stick rotations."
-                                        : Unsupported);
-        ImGui::EndDisabled();
-        ImGui::EndTable();
-    }
 
     Separator("Controller");
     if (BeginRows("##controller")) {
@@ -441,15 +416,6 @@ void GameTab() {
         static const char* const confirm_styles[] = {"Cross confirms, Circle cancels", "Circle confirms, Cross cancels"};
         ChoiceRow("Menu confirm button", s.menu_confirm_swap, confirm_styles, nullptr, 2,
                   "Which controller button confirms choices in save/load lists and confirmation dialogs.");
-        SliderRow("Mouse prompt distance", s.mouse_prompt_distance, 16, 200, "%d px",
-                  "With Joystick prompts on Adaptive mouse: how far the mouse moves for one step of a rotation.");
-        static const char* const aim_styles[] = {"Relative", "Absolute"};
-        ChoiceRow("Right stick style", s.mouse_aim_style, aim_styles, nullptr, 2,
-                  "L2 aim with the mouse (Head of Helios, Bow of Apollo). Relative: the stick follows the "
-                  "movement and goes back to neutral when the mouse stops. Absolute: the stick points from "
-                  "where the mouse was when L2 was pressed to where it is.");
-        SliderRow("Right stick sensitivity", s.mouse_aim_sensitivity, 10, 200, "%d%%",
-                  "L2 aim with the mouse: lower needs more mouse movement for the same stick, higher less.");
         CheckRow("Keep mouse in window", s.mouse_lock,
                  "While you play, the mouse stays in the game window; this menu and other windows get it back.");
         ImGui::EndTable();
@@ -464,49 +430,6 @@ void GameTab() {
         ChoiceRow("Speakers", s.audio_channels, speakers, nullptr, SpartanSettings::AudioChannelsCount,
                   "Layout the game's 7.1 mix is sent in. Automatic follows your sound device: stereo, 5.1 or 7.1. "
                   "Applies from the next start.");
-        ImGui::EndTable();
-    }
-
-    Separator("Multipliers");
-    if (Button("Reset all to 1x")) {
-        for (auto* m : {&s.red_orb_multiplier, &s.green_orb_multiplier, &s.blue_orb_multiplier,
-                        &s.gold_orb_multiplier, &s.damage_dealt, &s.damage_taken}) {
-            *m = 1.0f;
-        }
-        dirty = true;
-    }
-    Help("Every multiplier back to 1x (the game's normal values).");
-    if (BeginRows("##multipliers")) {
-        const bool max_orbs = (s.cheats_supported.load() & (1u << 4)) && s.cheats[4].load();
-        ImGui::BeginDisabled(!s.red_orbs_supported.load() || max_orbs);
-        MultiplierRow("Red orbs", s.red_orb_multiplier,
-                      !s.red_orbs_supported.load() ? Unsupported
-                      : max_orbs ? "Turn off Max red orbs to use the multiplier."
-                                 : "Red orbs gained. Orbs you have and prices stay the same.");
-        ImGui::EndDisabled();
-        ImGui::BeginDisabled(!s.orb_pickup_supported.load());
-        const char* pickup = s.orb_pickup_supported.load() ? nullptr : Unsupported;
-        MultiplierRow("Green orbs (health)", s.green_orb_multiplier,
-                      pickup ? pickup : "Health from each green orb. The bar stays within its maximum.");
-        MultiplierRow("Blue orbs (magic)", s.blue_orb_multiplier,
-                      pickup ? pickup : "Magic from each blue orb. The bar stays within its maximum.");
-        MultiplierRow("Gold orbs (Rage of Sparta)", s.gold_orb_multiplier,
-                      pickup ? pickup : "Rage of Sparta from each gold orb. The bar stays within its maximum.");
-        ImGui::EndDisabled();
-        ImGui::BeginDisabled(!s.damage_supported.load());
-        const char* damage = s.damage_supported.load() ? nullptr : Unsupported;
-        MultiplierRow("Damage dealt", s.damage_dealt, damage ? damage : "Damage Kratos does to enemies.");
-        MultiplierRow("Damage taken", s.damage_taken, damage ? damage : "Damage Kratos takes.");
-        ImGui::EndDisabled();
-        ImGui::EndTable();
-    }
-
-    Separator("HUD");
-    if (BeginRows("##hud")) {
-        ImGui::BeginDisabled(!s.actor_watch_supported.load());
-        CheckRow("Enemy health bar", s.enemy_health_bar,
-                 s.actor_watch_supported.load() ? "A bar at the top for the last enemy hit." : Unsupported);
-        ImGui::EndDisabled();
         ImGui::EndTable();
     }
 }
@@ -633,8 +556,8 @@ void PerformanceTab() {
         static const char* const engine_labels[] = {"60 (original)", "100", "120", "144", "180", "240"};
         static_assert(std::size(engine_labels) == G::EngineFps.size());
         ChoiceRow("Engine frame rate", s.engine_fps, engine_labels, G::EngineFps.data(), int(G::EngineFps.size()),
-                  "The highest frame rate the game itself runs at. 60 for spots that break above it (a ledge "
-                  "Kratos cannot cross, a button-mash prompt). R3 + L1 + R1 or F9 go through the list.");
+                  "The highest frame rate the game engine runs at. 60 is the native match simulation speed. "
+                  "R3 + L1 + R1 or F9 go through the list.");
         const int effective = G::EffectiveFps(s.fps_limit, SpartanSettings::EngineFpsNow());
         if (s.fps_limit == 0 || effective < s.fps_limit) {
             char text[48];
@@ -742,26 +665,7 @@ void OverlayTab() {
         InfoRow("Shader cache", text);
         ImGui::EndTable();
     }
-    // What the game's code lets the port reach in this game version (a version or region the hooks
-    // do not recognise has fewer): not whether a feature is on, which each tab sets.
-    Separator("Supported features");
-    ImGui::PushTextWrapPos(0.0f);
-    DisabledText("What this game version can use. Each one is turned on or off in its own tab.");
-    ImGui::PopTextWrapPos();
-    if (BeginRows("##features")) {
-        const std::pair<const char*, bool> features[] = {
-            {"Cheats", s.cheats_supported.load() != 0}, {"Red orbs", s.red_orbs_supported.load()},
-            {"Orb pickups", s.orb_pickup_supported.load()}, {"Damage", s.damage_supported.load()},
-            {"Enemy health bar", s.actor_watch_supported.load()}, {"Automatic QTE", s.qte_supported.load()},
-        };
-        for (const auto& [name, on] : features) {
-            Row(name);
-            ImGui::TextColored(on ? Ink::Gold : Ink::Muted, "%s  %s", on ? "\xE2\x9C\x93" : "\xE2\x80\x93",
-                               Tr(on ? "supported" : "not supported"));
-            ImGui::PopID();
-        }
-        ImGui::EndTable();
-    }
+
 }
 
 // Startup options changed since this launch (applied by "Apply and restart").
@@ -842,7 +746,7 @@ void Menu() {
     // and a close button on the right, a red rule under them.
     static const std::string title = [] {
         const std::string_view name = Common::ElfInfo::Instance().Title();
-        return std::string(name.empty() ? "SpartanPort" : name);
+        return std::string(name.empty() ? "Pro Evolution Soccer 2017" : name);
     }();
     if (title_font) ImGui::PushFont(title_font, kTitleSize);
     ImGui::TextColored(Ink::Text, "%s", title.c_str());
@@ -909,7 +813,7 @@ void Menu() {
 
     ImGui::Dummy(ImVec2(0, 2.0f * px));
     ImGui::PushTextWrapPos(0.0f);
-    DisabledText(footer_help ? footer_help : PadText("L1 / R1 or Q / E: switch tabs. Settings are saved in spartanport.ini.", "LB / RB or Q / E: switch tabs. Settings are saved in spartanport.ini.", "L / R or Q / E: switch tabs. Settings are saved in spartanport.ini."));
+    DisabledText(footer_help ? footer_help : PadText("L1 / R1 or Q / E: switch tabs. Settings are saved in pes2017.ini.", "LB / RB or Q / E: switch tabs. Settings are saved in pes2017.ini.", "L / R or Q / E: switch tabs. Settings are saved in pes2017.ini."));
     ImGui::PopTextWrapPos();
     if (const int changes = RestartChanges()) {
         ImGui::TextColored(Ink::Gold, Tr("%d change%s need%s a restart (unsaved progress is lost)."),
@@ -2345,7 +2249,7 @@ void ConfigureContext() {
     io.IniFilename = nullptr; // window positions are not kept
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-    io.BackendPlatformName = "spartanport";
+    io.BackendPlatformName = "pes2017";
 
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();

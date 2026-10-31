@@ -53,7 +53,9 @@ ObjectMotion::ObjectMotion(const Instance& instance_, Scheduler& scheduler_)
     : instance{instance_}, scheduler{scheduler_} {
     // Pipeline selection limits the extra attachment and vertex stores to likely
     // animated draws. A setting or environment override can still disable the path.
-    if (!SpartanSettings::Get().object_motion ||
+    const char* gow3_upscaler = std::getenv("SPARTAN_GOW3_UPSCALER");
+    if (!gow3_upscaler || gow3_upscaler[0] != '1' ||
+        !SpartanSettings::Get().object_motion ||
         SpartanSettings::Get().upscaler == SpartanSettings::UpscalerOff) {
         std::puts("Object motion: off (enable in menu or SPARTAN_OBJECT_MOTION=1)");
         return;

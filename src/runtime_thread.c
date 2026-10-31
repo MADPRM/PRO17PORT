@@ -301,7 +301,7 @@ static void set_host_name(const char *name) {
  * and Fios I/O) run above normal, or the audio output starves on 4 threads (48 ms gaps). */
 enum { HIGH_GUEST_PRIO = 400 };
 static void set_host_priority(const char *name,int guest_prio) {
-    int lower=!strncmp(name,"WorkerThread",12);
+    int lower=!strncmp(name,"WorkerThread",12) || !strncmp(name,"JobExecutor",11);
     if (!lower && guest_prio>=HIGH_GUEST_PRIO) return;
 #ifdef _WIN32
     if (!SetThreadPriority(GetCurrentThread(),lower ? THREAD_PRIORITY_BELOW_NORMAL : THREAD_PRIORITY_ABOVE_NORMAL))
@@ -410,7 +410,17 @@ static ABI __attribute__((noreturn)) void thread_exit(void *value) {
     /* No host unwinder: guest frames have no registered FDEs. */
     exit_longjmp(t);
 }
-static ABI int32_t thread_yield(void) { runtime_thread_count_yield(0); sched_yield(); return 0; }
+static ABI int32_t thread_yield(void) {
+    runtime_thread_count_yield(0);
+#ifdef _WIN32
+    static __thread unsigned spin;
+    if ((++spin & 63) == 0) compat_sleep_ns(100000); /* 100 us backoff when spinning idle */
+    else { __builtin_ia32_pause(); sched_yield(); }
+#else
+    sched_yield();
+#endif
+    return 0;
+}
 static ABI int32_t thread_get_prio(GuestThread *t,int *prio) {
     if (!find_thread(t)) return ERR(3);
     if (!prio) return ERR(22);

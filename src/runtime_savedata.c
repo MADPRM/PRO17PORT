@@ -249,6 +249,59 @@ bad:
     pthread_mutex_unlock(&lock);
     return ERR_PARAMETER;
 }
+static ABI int32_t save_get_param(const MountPoint *point, uint32_t type, void *buffer, uint64_t size, uint64_t *got) {
+    if (!initialized) return ERR_NOT_INITIALIZED;
+    if (!buffer) return ERR_PARAMETER;
+    pthread_mutex_lock(&lock);
+    int slot=slot_of(point);
+    if (slot<0) { pthread_mutex_unlock(&lock); return ERR_NOT_MOUNTED; }
+    Param p; read_param(slots[slot].meta,&p);
+    uint64_t out_size=0;
+    switch (type) {
+    case 0: if (size<sizeof(Param)) goto bad; memcpy(buffer,&p,sizeof(p)); out_size=sizeof(Param); break;
+    case 1: out_size=strnlen(p.title,sizeof(p.title))+1; if (size<out_size) goto bad; memcpy(buffer,p.title,out_size); break;
+    case 2: out_size=strnlen(p.subtitle,sizeof(p.subtitle))+1; if (size<out_size) goto bad; memcpy(buffer,p.subtitle,out_size); break;
+    case 3: out_size=strnlen(p.detail,sizeof(p.detail))+1; if (size<out_size) goto bad; memcpy(buffer,p.detail,out_size); break;
+    case 4: if (size<4) goto bad; memcpy(buffer,&p.user_param,4); out_size=4; break;
+    case 5: if (size<8) goto bad; memcpy(buffer,&p.mtime,8); out_size=8; break;
+    default: goto bad;
+    }
+    if (got) *got=out_size;
+    pthread_mutex_unlock(&lock);
+    return 0;
+bad:
+    pthread_mutex_unlock(&lock);
+    return ERR_PARAMETER;
+}
+static ABI int32_t save_mount_info(const MountPoint *point, SearchInfo *info) {
+    if (!initialized) return ERR_NOT_INITIALIZED;
+    if (!info) return ERR_PARAMETER;
+    pthread_mutex_lock(&lock);
+    int slot=slot_of(point);
+    pthread_mutex_unlock(&lock);
+    if (slot<0) return ERR_NOT_MOUNTED;
+    memset(info,0,sizeof(*info));
+    info->blocks=32768; info->free_blocks=16384;
+    return 0;
+}
+static ABI int32_t save_load_icon(const MountPoint *point, Icon *icon) {
+    if (!initialized) return ERR_NOT_INITIALIZED;
+    if (!icon || !icon->buffer || !icon->buffer_size) return ERR_PARAMETER;
+    pthread_mutex_lock(&lock);
+    int slot=slot_of(point);
+    int32_t r=ERR_NOT_MOUNTED;
+    if (slot>=0) {
+        char path[700]; snprintf(path,sizeof(path),"%s/icon0.png",slots[slot].meta);
+        FILE *f=fopen(path,"rb");
+        if (!f) r=ERR_NOT_FOUND;
+        else {
+            size_t n=fread((void *)icon->buffer,1,icon->buffer_size,f);
+            icon->data_size=n; r=0; fclose(f);
+        }
+    }
+    pthread_mutex_unlock(&lock);
+    return r;
+}
 static ABI int32_t save_icon(const MountPoint *point, const Icon *icon) {
     if (!initialized) return ERR_NOT_INITIALIZED;
     if (!icon || !icon->buffer) return ERR_PARAMETER;
@@ -371,7 +424,9 @@ static const RuntimeExport exports[]={
     {"sceSaveDataInitialize",save_initialize}, {"sceSaveDataInitialize2",save_initialize},
     {"sceSaveDataInitialize3",save_initialize}, {"sceSaveDataTerminate",save_terminate},
     {"sceSaveDataMount",save_mount}, {"sceSaveDataMount2",save_mount2}, {"sceSaveDataUmount",save_umount},
-    {"sceSaveDataSetParam",save_set_param}, {"sceSaveDataSaveIcon",save_icon}, {"sceSaveDataDelete",save_delete},
+    {"sceSaveDataSetParam",save_set_param}, {"sceSaveDataGetParam",save_get_param},
+    {"sceSaveDataGetMountInfo",save_mount_info}, {"sceSaveDataLoadIcon",save_load_icon},
+    {"sceSaveDataSaveIcon",save_icon}, {"sceSaveDataDelete",save_delete},
     {"sceSaveDataDirNameSearch",save_search},
     {"sceSaveDataSetupSaveDataMemory",memory_setup}, {"sceSaveDataGetSaveDataMemory",memory_get},
     {"sceSaveDataSetSaveDataMemory",memory_set},

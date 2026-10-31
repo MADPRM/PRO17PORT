@@ -130,12 +130,10 @@ inline int ParseRcasStrength(int value) {
 inline float RcasAttenuation(int strength) {
     return 2.0f * (1.0f - float(ParseRcasStrength(strength)) / 100.0f);
 }
-/// Whether the FSR pass runs: FSR 1 when the window is larger than the game's image, RCAS
-/// alone when they are the same size. A smaller window is left to the regular scaling.
+/// Whether the FSR pass runs: FSR 1 when enabled and output differs or upscales, RCAS whenever enabled.
 inline bool FsrPassRuns(bool fsr1, bool rcas, int in_w, int in_h, int out_w, int out_h) {
-    const bool upscale = in_w < out_w && in_h < out_h;
-    const bool same = in_w == out_w && in_h == out_h;
-    return (fsr1 && upscale) || (rcas && same);
+    const bool upscale = in_w != out_w || in_h != out_h;
+    return (fsr1 && upscale) || rcas;
 }
 
 /// What the present limit really allows: the engine ceiling caps it.

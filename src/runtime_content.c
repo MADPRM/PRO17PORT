@@ -8,6 +8,8 @@
 #define NOT_LOADED ((int32_t)0x805a1001)
 #define PARAMETER ((int32_t)0x80d90002)
 #define BUSY ((int32_t)0x80d90003)
+#define NOT_FOUND ((int32_t)0x80d90005)
+#define NOT_MOUNTED ((int32_t)0x80d90007)
 static unsigned refs, initialized, configured;
 static uint32_t parameters[5];
 static unsigned queries, lists;
@@ -77,6 +79,38 @@ static ABI int32_t addon_list(uint32_t service,void *list,uint32_t capacity,uint
     if (hits) *hits=0;
     ++lists; return 0;
 }
+static ABI int32_t addon_not_found(void) { require_initialized(); return NOT_FOUND; }
+static ABI int32_t temp_format(const char *mount_point) {
+    require_initialized();
+    if (!mount_point) return PARAMETER;
+    return 0;
+}
+static ABI int32_t temp_mount2(uint32_t option, char *mount_point) {
+    (void)option;
+    require_initialized();
+    if (!mount_point) return PARAMETER;
+    char host[512];
+    snprintf(host, sizeof(host), "%s/temp0", runtime_file_user_dir());
+    runtime_file_mount("/temp0", host);
+    snprintf(mount_point, 16, "/temp0");
+    return 0;
+}
+static ABI int32_t avail_space_kb(const char *mount_point, uint64_t *kb) {
+    require_initialized();
+    if (!mount_point || !kb) return PARAMETER;
+    *kb = 1048576; /* 1 GiB available */
+    return 0;
+}
+static const RuntimeExport exports[]={
+    {"sceAppContentAddcontEnqueueDownload", addon_not_found},
+    {"sceAppContentAddcontMount", addon_not_found},
+    {"sceAppContentGetAddcontInfo", addon_not_found},
+    {"sceAppContentDownloadDataFormat", temp_format},
+    {"sceAppContentTemporaryDataFormat", temp_format},
+    {"sceAppContentDownloadDataGetAvailableSpaceKb", avail_space_kb},
+    {"sceAppContentTemporaryDataGetAvailableSpaceKb", avail_space_kb},
+    {"sceAppContentTemporaryDataMount2", temp_mount2},
+};
 uintptr_t runtime_content_resolve(const char *name) {
     if (!strcmp(name,"g8cM39EUZ6o#libSceSysmodule")) return (uintptr_t)module_load;
     if (!strcmp(name,"fMP5NHUOaMk#libSceSysmodule")) return (uintptr_t)module_loaded;
@@ -84,7 +118,7 @@ uintptr_t runtime_content_resolve(const char *name) {
     if (!strcmp(name,"R9lA82OraNs#libSceAppContent")) return (uintptr_t)content_init;
     if (!strcmp(name,"99b82IKXpH4#libSceAppContent")) return (uintptr_t)param_int;
     if (!strcmp(name,"xnd8BJzAxmk#libSceAppContent")) return (uintptr_t)addon_list;
-    return 0;
+    return RUNTIME_LOOKUP(exports,name);
 }
 void runtime_content_report(void) {
     printf("Runtime: AppContent references=%u, initialized=%u, parameter queries=%u, list queries=%u\n",refs,initialized,queries,lists);

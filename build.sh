@@ -27,8 +27,15 @@ MINGW*|MSYS*)
         grep -v '^\[' out/gpu-build.log | tail -40 >&2
         echo 'Build failed (full log: out/gpu-build.log)' >&2; exit 1
     fi
-    cp out/gpu/spartanport-probe.exe out/gpu/spartanport-gpu-capabilities.exe out/gpu/spartanport-play.exe out/
-    echo "Built $PWD/out/spartanport-probe.exe"
+    if [[ -f out/gpu/PES2017.exe ]]; then
+        cp out/gpu/PES2017.exe out/
+        cp out/gpu/PES2017.exe out/spartanport-probe.exe
+        echo "Built $PWD/out/PES2017.exe"
+    elif [[ -f out/gpu/spartanport-probe.exe ]]; then
+        cp out/gpu/spartanport-probe.exe out/PES2017.exe
+        cp out/gpu/spartanport-probe.exe out/
+        echo "Built $PWD/out/PES2017.exe"
+    fi
     if [[ ${1:-} == --test ]]; then
         clang -std=c11 -O2 -g -Wall -Wextra -Werror -pthread -I. -Isrc tests/test_services.c src/compat_win.c -lbcrypt -o out/services-test.exe
         out/services-test.exe

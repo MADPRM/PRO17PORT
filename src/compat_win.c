@@ -111,7 +111,11 @@ int compat_random(void *buffer, size_t size) {
 /* One high-resolution timer per thread (Windows 10 1803+); a plain waitable timer before. */
 static __thread HANDLE sleep_timer;
 void compat_sleep_ns(uint64_t ns) {
-    if (!ns) { SwitchToThread(); return; }
+    if (!ns) {
+        static __thread unsigned zero_spin;
+        if ((++zero_spin & 31) != 0) { __builtin_ia32_pause(); SwitchToThread(); return; }
+        ns = 100000; /* 100 us after 32 back-to-back zero-sleep spins */
+    }
     if (!sleep_timer) {
         sleep_timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
         if (!sleep_timer) sleep_timer = CreateWaitableTimerExW(NULL, NULL, 0, TIMER_ALL_ACCESS);

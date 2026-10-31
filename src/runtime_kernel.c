@@ -143,7 +143,17 @@ static ABI int64_t posix_time(int64_t *out) { int64_t t=(int64_t)time(NULL); if 
 /* ---- process ---- */
 static ABI int32_t get_pagesize(void) { return PAGE; }
 static ABI int32_t get_pid(void) { return 1000; }
-static ABI int32_t yield(void) { runtime_thread_count_yield(0); sched_yield(); return 0; }
+static ABI int32_t yield(void) {
+    runtime_thread_count_yield(0);
+#ifdef _WIN32
+    static __thread unsigned spin;
+    if ((++spin & 63) == 0) compat_sleep_ns(100000);
+    else { __builtin_ia32_pause(); sched_yield(); }
+#else
+    sched_yield();
+#endif
+    return 0;
+}
 static ABI __attribute__((noreturn)) void hard_exit(int status) {
     printf("Runtime: guest requested _exit(%d)\n",status);
     runtime_report();
@@ -165,6 +175,59 @@ static ABI int32_t stop_unload_module(int32_t handle,uint64_t args,const void *a
     printf("Runtime: sceKernelStopUnloadModule(%d): no such module\n",handle);
     return ERR(3); /* ESRCH */
 }
+static ABI int32_t is_neo_mode(void) { return 0; } /* base PS4 profile, not PS4 Pro */
+/* sceKernelConvertUtcToLocaltime(time, *local, *timezone, *dst_seconds): host zone offset. */
+static ABI int32_t convert_utc_to_local(int64_t utc,int64_t *local,void *tz,uint64_t *dst) {
+    (void)tz;
+    time_t t=(time_t)utc; struct tm g;
+#ifdef _WIN32
+    if (gmtime_s(&g,&t)) return (int32_t)0x80020016;
+#else
+    if (!gmtime_r(&t,&g)) return (int32_t)0x80020016;
+#endif
+    g.tm_isdst=-1;
+    int64_t off=(int64_t)t-(int64_t)mktime(&g);
+    if (local) *local=utc+off;
+    if (dst) *dst=0;
+    return 0;
+}
+static ABI int32_t thread_set_sched_param(void *thread,int32_t policy,const void *param) { (void)thread; (void)policy; (void)param; return 0; }
+/* sceKernelConvertLocaltimeToUtc(local, timezone, *utc, *dst_seconds): inverse of the host zone offset. */
+static ABI int32_t convert_local_to_utc(int64_t local,int32_t timezone,int64_t *utc,uint64_t *dst) {
+    (void)timezone;
+    time_t t=(time_t)local; struct tm l;
+#ifdef _WIN32
+    if (localtime_s(&l,&t)) return (int32_t)0x80020016;
+#else
+    if (!localtime_r(&t,&l)) return (int32_t)0x80020016;
+#endif
+    l.tm_isdst=-1;
+    int64_t as_utc=(int64_t)mktime(&l); /* same fields read as local time */
+    if (utc) *utc=as_utc;
+    if (dst) *dst=0;
+    return 0;
+}
+/* scePthreadGetthreadid: a small id, unique per host thread (guest threads are host threads). */
+static ABI int32_t pthread_get_thread_id(void) {
+    static int32_t next=1;
+    static _Thread_local int32_t id;
+    if (!id) id=__atomic_fetch_add(&next,1,__ATOMIC_RELAXED);
+    return id;
+}
+static ABI int32_t kernel_chmod(const char *path,int32_t mode) { (void)path; (void)mode; return 0; } /* host permissions are not mapped */
+static ABI int32_t kernel_uuid_create(unsigned char *uuid) {
+    if (!uuid) return (int32_t)0x80020016;
+#ifdef _WIN32
+    if (compat_random(uuid,16)) return (int32_t)0x80020005;
+#else
+    if (getrandom(uuid,16,0)!=16) return (int32_t)0x80020005;
+#endif
+    uuid[6]=(unsigned char)((uuid[6]&0x0f)|0x40); uuid[8]=(unsigned char)((uuid[8]&0x3f)|0x80); /* RFC 4122 v4 */
+    return 0;
+}
+/* Exception unwinding asks which module owns an address; none are described yet. */
+static ABI int32_t module_info_for_unwind(uint64_t address,int32_t flags,void *info) { (void)address; (void)flags; (void)info; return (int32_t)0x80020003; }
+static ABI int32_t internal_module_segment_info(int32_t handle,void *info) { (void)handle; (void)info; return (int32_t)0x80020003; }
 static ABI int32_t module_info_from_addr(uint64_t address,int32_t flags,void *info) {
     (void)address;
     if (flags>=3) return ERR(22);
@@ -326,7 +389,9 @@ static const RuntimeExport exports[]={
     {"sceKernelDebugRaiseExceptionOnReleaseMode",raise_exception},
     {"sceKernelPrintBacktraceWithModuleInfo",print_backtrace},
     {"getargc",get_argc}, {"getargv",get_argv}, {"sceKernelStopUnloadModule",stop_unload_module},
-    {"sceKernelGetModuleInfoFromAddr",module_info_from_addr}, {"sceKernelMlock",kernel_mlock},
+    {"sceKernelGetModuleInfoFromAddr",module_info_from_addr}, {"sceKernelIsNeoMode",is_neo_mode}, {"sceKernelConvertUtcToLocaltime",convert_utc_to_local}, {"scePthreadSetschedparam",thread_set_sched_param}, {"sceKernelConvertLocaltimeToUtc",convert_local_to_utc},
+    {"scePthreadGetthreadid",pthread_get_thread_id}, {"sceKernelChmod",kernel_chmod}, {"sceKernelUuidCreate",kernel_uuid_create},
+    {"sceKernelGetModuleInfoForUnwind",module_info_for_unwind}, {"sceKernelInternalMemoryGetModuleSegmentInfo",internal_module_segment_info}, {"sceKernelMlock",kernel_mlock},
     {"__elf_phdr_match_addr",elf_phdr_match_addr}, {"_is_signal_return",is_signal_return},
     {"__pthread_cxa_finalize",pthread_cxa_finalize}, {"sigreturn",unwind_resume},
     {"__Ux86_64_setcontext",unwind_resume},

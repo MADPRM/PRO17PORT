@@ -14,12 +14,19 @@ Sampler::Sampler(const Vulkan::Instance& instance, const AmdGpu::Sampler& sample
     using namespace Vulkan;
     const bool game_anisotropy = AmdGpu::IsAnisoFilter(sampler.xy_mag_filter) ||
                                  AmdGpu::IsAnisoFilter(sampler.xy_min_filter);
-    // spartanport: the menu's anisotropic filtering, on filtered and mipmapped textures (not on
-    // point-sampled lookups, unmipmapped render targets or depth compares).
+    // spartanport: the menu's anisotropic filtering, on filtered and mipmapped surface textures
+    // (not on point-sampled lookups, clamped render targets/LUTs, unmipmapped images or depth compares).
     const int forced = SpartanSettings::Get().startup_anisotropy;
-    const bool force_anisotropy = forced > 1 && !is_depth &&
+    const bool repeating_uv =
+        (sampler.clamp_x == AmdGpu::ClampMode::Wrap || sampler.clamp_x == AmdGpu::ClampMode::Mirror) &&
+        (sampler.clamp_y == AmdGpu::ClampMode::Wrap || sampler.clamp_y == AmdGpu::ClampMode::Mirror);
+    const bool has_mip_chain =
+        sampler.mip_filter == AmdGpu::MipFilter::Linear && sampler.MaxLod() >= 4.0f &&
+        sampler.MaxLod() > sampler.MinLod() + 1.0f;
+    const bool force_anisotropy = forced > 1 && !is_depth && !sampler.force_unnormalized &&
                                   sampler.xy_min_filter != AmdGpu::Filter::Point &&
-                                  sampler.mip_filter != AmdGpu::MipFilter::None;
+                                  sampler.xy_mag_filter != AmdGpu::Filter::Point &&
+                                  (game_anisotropy || (repeating_uv && has_mip_chain));
     const bool anisotropy_enable =
         instance.IsAnisotropicFilteringSupported() && (game_anisotropy || force_anisotropy);
     const float requested = std::max(game_anisotropy ? sampler.MaxAniso() : 1.0f,

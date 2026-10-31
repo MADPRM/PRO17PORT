@@ -204,7 +204,7 @@ if (WIN32)
     add_executable(spartanport-probe ../src/probe.c ${SPARTAN_RUNTIME} ../src/compat_win.c ../src/cpu_check.c ../src/vulkan_smoke.c
         ../src/isa_rewrite.c ../src/isa_emulate.c
         ../packaging/windows/spartanport-probe.rc)
-    set_target_properties(spartanport-probe PROPERTIES C_STANDARD 11 C_EXTENSIONS OFF)
+    set_target_properties(spartanport-probe PROPERTIES OUTPUT_NAME "PES2017" C_STANDARD 11 C_EXTENSIONS OFF)
     target_compile_options(spartanport-probe PRIVATE $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Werror>)
     target_include_directories(spartanport-probe PRIVATE .. ../src)
     target_link_libraries(spartanport-probe PRIVATE spartanportgpu atrac9 onecore bcrypt ws2_32 -pthread)

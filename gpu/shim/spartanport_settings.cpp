@@ -25,7 +25,7 @@ constexpr const char* GlyphStyles[] = {"off", "xbox", "nintendo", "keyboard", "a
 
 const char* Path() {
     const char* env = std::getenv("SPARTAN_CONFIG");
-    return env && env[0] ? env : "spartanport.ini";
+    return env && env[0] ? env : "pes2017.ini";
 }
 
 float Clamp(float v, float lo, float hi) {
@@ -141,11 +141,9 @@ void Set(Values& v, const std::string& key, const std::string& value) {
     } else if (key == "async_shaders") {
         v.async_shaders = i != 0;
     } else if (key == "fsr1") {
-        // FSR 1 left the launcher and the in-game menu: a value saved by an older version has no
-        // control left to turn it off, so it stays off.
-        v.fsr1 = false;
+        v.fsr1 = i != 0 || EqualsIgnoreCase(value, "true") || EqualsIgnoreCase(value, "on");
     } else if (key == "rcas") {
-        v.rcas = i != 0;
+        v.rcas = i != 0 || EqualsIgnoreCase(value, "true") || EqualsIgnoreCase(value, "on");
     } else if (key == "depth_of_field") {
         v.depth_of_field = i != 0;
     } else if (key == "rcas_strength") {

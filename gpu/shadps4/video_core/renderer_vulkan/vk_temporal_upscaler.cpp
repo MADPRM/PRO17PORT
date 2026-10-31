@@ -172,9 +172,10 @@ TemporalUpscaler::TemporalUpscaler(const Instance& instance_, Scheduler& schedul
     SpartanSettings::ConfigureUpscalerSupport(instance.IsFsr4Int8Supported(),
                                             instance.IsFsr411Supported());
 #endif
-    // Available unless SPARTAN_UPSCALER=none; on/off and the parameters are the menu's settings.
-    const char* env = std::getenv("SPARTAN_UPSCALER");
-    enabled = !(env && std::strcmp(env, "none") == 0);
+    // Only enable the GOW3-specific temporal upscaler hooks when SPARTAN_GOW3_UPSCALER=1;
+    // generic spatial FSR1 (EASU + RCAS) and resolution scaling run in vk_presenter.cpp.
+    const char* gow3_env = std::getenv("SPARTAN_GOW3_UPSCALER");
+    enabled = gow3_env && gow3_env[0] == '1';
     if (const char* hash = std::getenv("SPARTAN_UPSCALE_BEFORE_CS")) {
         trigger_hash = std::strtoull(hash, nullptr, 16);
     }

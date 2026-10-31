@@ -224,7 +224,7 @@ extern "C" int spartanportgpu_init(const SpartanGpuConfig* config) {
 #endif
     Core::Emulator::FillElfInfo(*config);
     // The window carries the project name; the dump's own title stays in ElfInfo (above).
-    const std::string title = "SpartanPort";
+    const std::string title = "Pro Evolution Soccer 2017";
     const s32 width = config->width, height = config->height;
     g_window_thread = std::thread([title, width, height] {
         Common::SetCurrentThreadName("spartanport:window");

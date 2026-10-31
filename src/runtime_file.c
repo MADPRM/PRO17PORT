@@ -76,10 +76,16 @@ void runtime_file_unmount(const char *guest) {
     pthread_mutex_unlock(&lock);
 }
 static char user_root[512]="user";
+static char patch_root[512]="";
 const char *runtime_file_user_dir(void) { return user_root; }
 void runtime_file_configure(const char *app0,const char *user) {
     char path[600];
     snprintf(user_root,sizeof(user_root),"%s",user);
+    const char *patch_env=getenv("SPARTAN_PATCH_DIR");
+    if (patch_env && patch_env[0]) {
+        snprintf(patch_root,sizeof(patch_root),"%s",patch_env);
+        printf("Runtime: patch overlay active -> %s\n",patch_root);
+    } else patch_root[0]=0;
     runtime_file_mount("/app0",app0);
     runtime_file_mount("/hostapp",app0);
     const char *writable[]={"temp0","download0","data"};
@@ -108,6 +114,14 @@ static int translate(const char *guest,char *out,size_t size) {
     int result=0;
     if (!m) result=ENOENT;
     else if ((size_t)snprintf(out,size,"%s%s",m->host,buffer+best)>=size) result=ENAMETOOLONG;
+    else if (patch_root[0] && (!strcmp(m->guest,"/app0") || !strcmp(m->guest,"/hostapp"))) {
+        char patch_candidate[1024];
+        if ((size_t)snprintf(patch_candidate,sizeof(patch_candidate),"%s%s",patch_root,buffer+best)<sizeof(patch_candidate)) {
+            HostStat ps;
+            if (!host_stat(patch_candidate,&ps) && S_ISREG(ps.st_mode))
+                snprintf(out,size,"%s",patch_candidate);
+        }
+    }
     pthread_mutex_unlock(&lock);
     if (result==ENOENT) fprintf(stderr,"Runtime: no mount for guest path %s\n",guest);
     return result;
@@ -470,11 +484,29 @@ PAIR(lseek,(int fd,int64_t o,int w),(fd,o,w))
 PAIR(fstat,(int fd,GuestStat *s),(fd,s))
 PAIR(stat,(const char *p,GuestStat *s),(p,s))
 PAIR(getdents,(int fd,char *b,uint64_t n,int64_t *base),(fd,b,n,base))
+static ABI int64_t sce_getdents3(int fd,char *b,uint64_t n) { return sce(do_getdents(fd,b,n,NULL)); }
+/* readv/writev: guest iovec is {base, length}. Stops at the first short or failed transfer. */
+typedef struct { void *base; uint64_t length; } GuestIovec;
+static int64_t do_vector(int fd,const GuestIovec *vec,int32_t count,int write_op) {
+    if (!vec || count<0 || count>1024) return -EINVAL;
+    int64_t total=0;
+    for (int32_t i=0;i<count;++i) {
+        if (!vec[i].length) continue;
+        int64_t r=write_op ? do_write(fd,vec[i].base,vec[i].length) : do_read(fd,vec[i].base,vec[i].length);
+        if (r<0) return total ? total : r;
+        total+=r;
+        if ((uint64_t)r<vec[i].length) break;
+    }
+    return total;
+}
+static ABI int64_t sce_readv(int fd,const GuestIovec *v,int32_t n) { return sce(do_vector(fd,v,n,0)); }
+static ABI int64_t sce_writev(int fd,const GuestIovec *v,int32_t n) { return sce(do_vector(fd,v,n,1)); }
 PAIR(rename,(const char *a,const char *b),(a,b))
 PAIR(ftruncate,(int fd,int64_t l),(fd,l))
 PAIR(truncate,(const char *p,int64_t l),(p,l))
 PAIR(fsync,(int fd),(fd))
 static ABI int64_t posix_access(const char *p,int m) { return posix(do_access(p,m)); }
+static ABI int64_t posix_creat(const char *p,int m) { return posix(do_open(p,0x601,m)); } /* O_WRONLY|O_CREAT|O_TRUNC */
 static ABI int64_t sce_mkdir(const char *p,int m) { return sce(path_op(p,0,m)); }
 static ABI int64_t posix_mkdir(const char *p,int m) { return posix(path_op(p,0,m)); }
 static ABI int64_t sce_rmdir(const char *p) { return sce(path_op(p,1,0)); }
@@ -486,7 +518,7 @@ static ABI int32_t sce_check_reachability(const char *p) {
 }
 
 static const RuntimeExport exports[]={
-    {"sceKernelOpen",sce_open}, {"open",posix_open}, {"_open",posix_open},
+    {"sceKernelOpen",sce_open}, {"open",posix_open}, {"_open",posix_open}, {"creat",posix_creat},
     {"sceKernelClose",sce_close}, {"close",posix_close}, {"_close",posix_close},
     {"sceKernelRead",sce_read}, {"read",posix_read}, {"_read",posix_read},
     {"sceKernelPread",sce_pread}, {"pread",posix_pread},
@@ -495,7 +527,7 @@ static const RuntimeExport exports[]={
     {"sceKernelLseek",sce_lseek}, {"lseek",posix_lseek},
     {"sceKernelFstat",sce_fstat}, {"fstat",posix_fstat},
     {"sceKernelStat",sce_stat}, {"stat",posix_stat},
-    {"sceKernelGetdirentries",sce_getdents}, {"getdirentries",posix_getdents},
+    {"sceKernelGetdirentries",sce_getdents}, {"sceKernelGetdents",sce_getdents3}, {"sceKernelReadv",sce_readv}, {"sceKernelWritev",sce_writev}, {"getdirentries",posix_getdents},
     {"sceKernelRename",sce_rename}, {"rename",posix_rename},
     {"sceKernelFtruncate",sce_ftruncate}, {"ftruncate",posix_ftruncate},
     {"sceKernelTruncate",sce_truncate}, {"truncate",posix_truncate},

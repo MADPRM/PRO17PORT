@@ -262,8 +262,10 @@ void TextureCache::ProcessDownloadImages() {
         for (const ImageId image_id : download_images) {
             const auto& image = slot_images[image_id];
             if (False(image.flags & ImageFlagBits::GpuModified)) continue;
-            const u64 size = u64{image.info.pitch} * image.info.size.height *
-                image.info.size.depth * image.info.resources.layers * (image.info.num_bits / 8);
+            const u64 size = image.info.props.is_tiled
+                ? u64{image.info.guest_size}
+                : u64{image.info.pitch} * image.info.size.height * image.info.size.depth *
+                      image.info.resources.layers * (image.info.num_bits / 8);
             if (!pending_readbacks.CanFit(size)) {
                 ++readbacks_waited;
                 scheduler.Finish();
@@ -360,15 +362,20 @@ std::optional<TextureCache::PendingDownload> TextureCache::RecordImageDownload(I
     if (False(image.flags & ImageFlagBits::GpuModified)) {
         return std::nullopt;
     }
-    const u32 download_size = image.info.pitch * image.info.size.height * image.info.size.depth *
-                              image.info.resources.layers * (image.info.num_bits / 8);
+    const u32 download_size = image.info.props.is_tiled
+                                  ? image.info.guest_size
+                                  : image.info.pitch * image.info.size.height *
+                                        image.info.size.depth * image.info.resources.layers *
+                                        (image.info.num_bits / 8);
     ASSERT(download_size <= image.info.guest_size);
     const auto download =
         runtime.GetStagingPool().Request(download_size, MemoryType::HostCached, 16, true);
-    const vk::BufferImageCopy image_download = {
-        .bufferOffset = download.offset,
-        .bufferRowLength = image.info.pitch,
-        .bufferImageHeight = image.info.size.height,
+    vk::BufferImageCopy image_download = {
+        .bufferOffset = image.info.props.is_tiled ? 0u : download.offset,
+        .bufferRowLength = image.info.props.is_tiled ? image.info.mips_layout[0].pitch
+                                                     : image.info.pitch,
+        .bufferImageHeight = image.info.props.is_tiled ? image.info.mips_layout[0].height
+                                                       : image.info.size.height,
         .imageSubresource =
             {
                 .aspectMask = image.info.props.is_depth ? vk::ImageAspectFlagBits::eDepth
@@ -380,7 +387,12 @@ std::optional<TextureCache::PendingDownload> TextureCache::RecordImageDownload(I
         .imageOffset = {0, 0, 0},
         .imageExtent = {image.info.size.width, image.info.size.height, image.info.size.depth},
     };
-    runtime.DownloadImage(&image, download.buffer, std::span{&image_download, 1});
+    if (image.info.props.is_tiled) {
+        tile_manager.TileImage(image, std::span{&image_download, 1}, download.buffer,
+                               download.offset);
+    } else {
+        runtime.DownloadImage(&image, download.buffer, std::span{&image_download, 1});
+    }
     return PendingDownload{image.info.guest_address, download_size, download};
 }
 
@@ -854,13 +866,23 @@ std::tuple<ImageId, int, int> TextureCache::ResolveOverlap(const ImageInfo& imag
             cache_image.info.resources.layers == 1;
 
         // Size and resources are less than or equal, use image view.
-        if (image_info.pixel_format != cache_image.info.pixel_format ||
-            image_info.guest_size <= cache_image.info.guest_size || pow2_padding_only) {
+        if ((image_info.pixel_format != cache_image.info.pixel_format ||
+             image_info.guest_size <= cache_image.info.guest_size || pow2_padding_only) &&
+            (image_info.size == cache_image.info.size || pow2_padding_only)) {
             auto result_id = merged_image_id ? merged_image_id : cache_image_id;
             const auto& result_image = slot_images[result_id];
             const bool is_compatible =
                 IsVulkanFormatCompatible(result_image.info.pixel_format, image_info.pixel_format);
             return {is_compatible ? result_id : ImageId{}, -1, -1};
+        }
+        if (image_info.guest_size < cache_image.info.guest_size &&
+            image_info.size != cache_image.info.size) {
+            // Different extent at the same base address: allocate as separate image (PublishAliasWrite
+            // syncs the overlapping top-left corner if layout matches).
+            if (safe_to_delete) {
+                FreeImage(cache_image_id);
+            }
+            return {merged_image_id, -1, -1};
         }
 
         // Size and resources are greater, expand the image.
@@ -1260,6 +1282,18 @@ ImageId TextureCache::FindImageFromRange(VAddr address, size_t size, bool ensure
                 return image_ids[i];
             }
         }
+        ImageId best_id{};
+        u64 best_tick = 0;
+        for (s32 i = 0; i < image_ids.size(); ++i) {
+            Image& image = slot_images[image_ids[i]];
+            if (image.tick_accessed_last >= best_tick) {
+                best_tick = image.tick_accessed_last;
+                best_id = image_ids[i];
+            }
+        }
+        if (best_id) {
+            return best_id;
+        }
         LOG_WARNING(Render_Vulkan,
                     "Failed to find exact image match for copy addr={:#x}, size={:#x}", address,
                     size);
@@ -1272,11 +1306,17 @@ ImageView& TextureCache::FindTexture(ImageId image_id, const ImageDesc& desc, Vi
     Image& image = slot_images[image_id];
     if (desc.type == BindingType::Storage) {
         image.flags |= ImageFlagBits::GpuModified;
-        if (readback_linear_images && (!image.info.props.is_tiled || image.info.size.width <= 8) &&
+        image.usage.storage = 1u;
+        const bool is_small_exposure =
+            !image.info.props.is_tiled ||
+            (image.info.size.width <= 32 && image.info.size.height <= 32);
+        if ((is_small_exposure || readback_linear_images) && !image.info.props.is_depth &&
             image.info.guest_address != 0) {
             std::unique_lock lk{download_images_mutex};
             download_images.emplace(image_id);
         }
+    } else {
+        image.usage.texture = 1u;
     }
     if (refresh) {
         UpdateImage(image_id);
@@ -1303,7 +1343,10 @@ ImageView& TextureCache::FindTexture(ImageId image_id, const ImageDesc& desc, Vi
 ImageView& TextureCache::FindRenderTarget(ImageId image_id, const ImageDesc& desc) {
     Image& image = slot_images[image_id];
     image.flags |= ImageFlagBits::GpuModified;
-    if (readback_linear_images && (!image.info.props.is_tiled || image.info.size.width <= 8)) {
+    const bool is_small_exposure =
+        !image.info.props.is_tiled ||
+        (image.info.size.width <= 32 && image.info.size.height <= 32);
+    if ((is_small_exposure || readback_linear_images) && !image.info.props.is_depth) {
         std::unique_lock lk{download_images_mutex};
         download_images.emplace(image_id);
     }
@@ -1413,9 +1456,13 @@ void TextureCache::RefreshImage(Image& image) {
 
         // Protect GPU modified resources from accidental CPU reuploads.
         if (is_gpu_modified && !is_gpu_dirty) {
+            if (image.usage.render_target || image.usage.depth_target || image.usage.storage) {
+                continue;
+            }
             const u8* addr = std::bit_cast<u8*>(image.info.guest_address);
             const u64 hash = XXH3_64bits(addr + mip_offset, mip_size);
-            if (image.mip_hashes[m] == hash) {
+            if (image.mip_hashes[m] == 0 || image.mip_hashes[m] == hash) {
+                image.mip_hashes[m] = hash;
                 continue;
             }
             image.mip_hashes[m] = hash;
@@ -1466,8 +1513,15 @@ vk::Sampler TextureCache::GetSampler(const AmdGpu::Sampler& sampler,
     const auto& spartan = SpartanSettings::Get();
     const volatile int32_t* power_up_menu = spartan.power_up_menu_global.load();
     const bool in_power_up_menu = power_up_menu && *power_up_menu != 0;
-    if (!is_depth && !in_power_up_menu && sampler.xy_min_filter != AmdGpu::Filter::Point &&
-        sampler.mip_filter != AmdGpu::MipFilter::None) {
+    const bool repeating_uv =
+        (sampler.clamp_x == AmdGpu::ClampMode::Wrap ||
+         sampler.clamp_x == AmdGpu::ClampMode::Mirror) &&
+        (sampler.clamp_y == AmdGpu::ClampMode::Wrap ||
+         sampler.clamp_y == AmdGpu::ClampMode::Mirror);
+    if (!is_depth && !in_power_up_menu && repeating_uv && !sampler.force_unnormalized &&
+        sampler.xy_min_filter != AmdGpu::Filter::Point &&
+        sampler.xy_mag_filter != AmdGpu::Filter::Point &&
+        sampler.mip_filter == AmdGpu::MipFilter::Linear && sampler.MaxLod() >= 4.0f) {
         extra_lod_bias += SpartanSettings::TextureLodBias(spartan.texture_quality.load());
     }
     // Compare and plain uses of one S# need separate samplers; so do extra LOD biases.

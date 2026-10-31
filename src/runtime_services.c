@@ -840,6 +840,16 @@ static ABI int32_t trophy_unlock_state(int32_t ctx,int32_t handle,uint32_t *flag
     return 0;
 }
 static ABI int32_t trophy_release(int32_t id) { return id>0 ? 0 : TROPHY_INVALID; }
+static ABI int32_t trophy_group_info(int32_t ctx,int32_t handle,int32_t gid,void *details,void *data) {
+    (void)gid; return trophy_game_info(ctx,handle,details,data);
+}
+static ABI int32_t trophy_icon_buf(int32_t ctx,int32_t handle,void *buf,uint64_t *size) {
+    (void)ctx; (void)handle; (void)buf; if (size) *size=0; return 0;
+}
+static ABI int32_t trophy_id_icon_buf(int32_t ctx,int32_t handle,int32_t id,void *buf,uint64_t *size) {
+    (void)ctx; (void)handle; (void)id; (void)buf; if (size) *size=0; return 0;
+}
+static ABI int32_t trophy_screenshot(void) { return 0; }
 
 /* ---- PlayGo: fully installed package ---- */
 static int playgo_handle, playgo_chunks=-1;
@@ -898,6 +908,26 @@ static ABI int32_t playgo_todo(int32_t handle,const void *list,uint32_t count) {
     if (!list) return PLAYGO_BAD_POINTER;
     return count ? 0 : PLAYGO_BAD_SIZE; /* everything is installed: nothing to schedule */
 }
+static uint64_t playgo_language_mask;
+static ABI int32_t playgo_get_todo(int32_t handle,void *list,uint32_t count,uint32_t *out) {
+    (void)list; (void)count;
+    if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
+    if (!out) return PLAYGO_BAD_POINTER;
+    *out=0; return 0; /* everything is installed: nothing pending */
+}
+static ABI int32_t playgo_set_language_mask(int32_t handle,uint64_t mask) {
+    if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
+    playgo_language_mask=mask; return 0;
+}
+static ABI int32_t playgo_get_language_mask(int32_t handle,uint64_t *mask) {
+    if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
+    if (!mask) return PLAYGO_BAD_POINTER;
+    *mask=playgo_language_mask; return 0;
+}
+static ABI int32_t user_color(int32_t id,int32_t *color) {
+    if (id!=USER_ID || !color) return USER_INVALID_ARGUMENT;
+    *color=0; return 0; /* SCE_USER_SERVICE_USER_COLOR_BLUE */
+}
 static ABI int32_t playgo_close(int32_t handle) {
     if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
     playgo_handle=0; return 0;
@@ -951,6 +981,8 @@ static const RuntimeExport exports[]={
     {"sceNetCtlRegisterCallback",netctl_register}, {"sceNetCtlCheckCallback",netctl_check},
     {"sceNetCtlUnregisterCallback",netctl_unregister}, {"sceNetCtlGetNatInfo",netctl_nat},
     {"sceSslInit",lib_init_id}, {"sceSslTerm",ok_void},
+    {"sceCoredumpRegisterCoredumpHandler",ok_void}, {"sceUserServiceGetUserColor",user_color}, {"sceErrorDialogInitialize",ok_void},
+    {"sceSharePlayInitialize",ok_void},
     {"sceHttpInit",lib_init_id}, {"sceHttpTerm",ok_void},
     {"sceHttpCreateTemplate",http_object}, {"sceHttpDeleteTemplate",ok_void},
     {"sceHttpCreateConnectionWithURL",http_object}, {"sceHttpCreateRequestWithURL",http_object},
@@ -1041,13 +1073,17 @@ static const RuntimeExport exports[]={
     {"sceNpTrophyGetGameInfo",trophy_game_info}, {"sceNpTrophyGetTrophyInfo",trophy_info},
     {"sceNpTrophyGetTrophyUnlockState",trophy_unlock_state}, {"sceNpTrophyAbortHandle",trophy_release},
     {"sceNpTrophyDestroyHandle",trophy_release}, {"sceNpTrophyDestroyContext",trophy_release},
+    {"sceNpTrophyGetGroupInfo",trophy_group_info}, {"sceNpTrophyGetGameIcon",trophy_icon_buf},
+    {"sceNpTrophyGetGroupIcon",trophy_id_icon_buf}, {"sceNpTrophyGetTrophyIcon",trophy_id_icon_buf},
+    {"sceNpTrophyCaptureScreenshot",trophy_screenshot},
     {"scePlayGoInitialize",playgo_init}, {"scePlayGoOpen",playgo_open}, {"scePlayGoGetChunkId",playgo_chunk_ids},
     {"scePlayGoGetLocus",playgo_locus}, {"scePlayGoSetInstallSpeed",playgo_speed},
     {"scePlayGoGetInstallSpeed",playgo_get_speed}, {"scePlayGoGetProgress",playgo_progress},
-    {"scePlayGoSetToDoList",playgo_todo}, {"scePlayGoClose",playgo_close}, {"scePlayGoTerminate",playgo_terminate},
+    {"scePlayGoSetToDoList",playgo_todo}, {"scePlayGoGetToDoList",playgo_get_todo},
+    {"sceGameLiveStreamingInitialize",ok_void}, {"scePlayGoSetLanguageMask",playgo_set_language_mask}, {"scePlayGoGetLanguageMask",playgo_get_language_mask}, {"sceNetCtlInit",ok_void}, {"scePlayGoClose",playgo_close}, {"scePlayGoTerminate",playgo_terminate},
     {"sceMouseInit",ok_void}, {"sceMouseOpen",mouse_open}, {"sceMouseRead",mouse_read}, {"sceMouseClose",mouse_close},
     {"sceAudioInOpen",audio_in_open},
-    {"sceDiscMapIsRequestOnHDD",discmap_on_hdd}, {"sceDiscMap_8A828CAEE7EDD5E9",discmap_8a82},
+    {"sceDiscMapIsRequestOnHDD",discmap_on_hdd}, {"sceDiscMap_8A828CAEE7EDD5E9",discmap_8a82}, {"sceDiscMap_fJgPwqifno",discmap_8a82},
     {"sceVoiceInit",ok_void}, {"sceVoiceEnd",ok_void},
 };
 uintptr_t runtime_services_resolve(const char *name) { return RUNTIME_LOOKUP(exports,name); }

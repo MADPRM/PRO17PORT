@@ -32,6 +32,16 @@ static ABI void guest_set_heap_api(void **api) {
     application_heap_api=api;
     puts("Runtime: application heap API registered");
 }
+static uint64_t heap_trace_id_mask[8];
+static uint64_t heap_trace_mstate_table[64];
+static ABI void guest_heap_get_trace_info(uint64_t *info) {
+    if (info) {
+        info[0] = 32;
+        info[1] = 0;
+        info[2] = (uintptr_t)heap_trace_id_mask;
+        info[3] = (uintptr_t)heap_trace_mstate_table;
+    }
+}
 void **runtime_application_heap_api(void) { return application_heap_api; }
 void runtime_set_module_tls(uint64_t module, const void *data, uint64_t filesz, uint64_t memsz) {
     if (module<2 || module>=TLS_MODULES) { fputs("STOP: unsupported TLS module id\n",stderr); exit(21); }
@@ -75,6 +85,7 @@ void runtime_report(void) {
     runtime_thread_report();
     runtime_mutex_report();
     runtime_rwlock_report();
+    runtime_evf_report();
     runtime_sema_report();
     runtime_content_report();
     runtime_memory_report();
@@ -221,6 +232,7 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
     if (!strcmp(name, "vNe1w4diLCs#libkernel")) return (uintptr_t)guest_tls_get_addr;
     if (!strcmp(name, "959qrazPIrg#libkernel")) return (uintptr_t)guest_procparam;
     if (!strcmp(name, "p5EcQeEeJAE#libkernel")) return (uintptr_t)guest_set_heap_api;
+    if (!strcmp(name, "NWtTN10cJzE#libSceLibcInternalExt")) return (uintptr_t)guest_heap_get_trace_info;
     uintptr_t mutex = runtime_mutex_resolve(name);
     if (mutex) return mutex;
     uintptr_t thread = runtime_thread_resolve(name);
@@ -232,6 +244,7 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
     uintptr_t sema = runtime_sema_resolve(name);
     if (sema) return sema;
     uintptr_t rwlock = runtime_rwlock_resolve(name);
+    uintptr_t evf = runtime_evf_resolve(name); if (evf) return evf;
     if (rwlock) return rwlock;
     uintptr_t memory = runtime_memory_resolve(name);
     if (memory) return memory;
@@ -239,6 +252,7 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
     if (kernel) return kernel;
     uintptr_t services = runtime_services_resolve(name);
     if (services) return services;
+    uintptr_t offline = runtime_offline_resolve(name); if (offline) return offline;
     uintptr_t ajm = runtime_ajm_resolve(name);
     if (ajm) return ajm;
     uintptr_t videodec = runtime_videodec_resolve(name);

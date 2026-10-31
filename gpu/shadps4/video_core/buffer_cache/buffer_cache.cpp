@@ -303,7 +303,8 @@ std::pair<const Buffer*, u64> BufferCache::ObtainBuffer(VAddr device_addr, u32 s
         NoteHotUse(device_addr, size);
     }
     // For read-only buffers use device local stream buffer to reduce renderpass breaks.
-    if (!is_written && size <= STREAM_THRESHOLD && !IsRegionGpuModified(device_addr, size)) {
+    if (!is_written && size <= STREAM_THRESHOLD && !IsRegionGpuModified(device_addr, size) &&
+        !HasGpuModifiedImage(device_addr, size)) {
         if (stats) {
             auto& region = Stats().regions[RegionKey(device_addr)];
             ++region.stream_count;
@@ -388,6 +389,21 @@ bool BufferCache::IsRegionCpuModified(VAddr addr, size_t size) {
 
 bool BufferCache::IsRegionGpuModified(VAddr addr, size_t size) {
     return memory_tracker->IsRegionGpuModified(addr, size);
+}
+
+bool BufferCache::HasGpuModifiedImage(VAddr addr, u32 size) {
+    const u64 generation = texture_cache.RegistryGeneration();
+    auto& miss = image_miss_cache[((addr >> 6) ^ size * 0x9E3779B1u) % image_miss_cache.size()];
+    if (miss.address == addr && miss.size == size && miss.generation == generation &&
+        !SpartanToggle::Disabled(SpartanToggle::TextureBindingMemo)) {
+        return false;
+    }
+    const ImageId image_id = texture_cache.FindImageFromRange(addr, size);
+    if (!image_id) {
+        miss = {addr, size, generation};
+        return false;
+    }
+    return true;
 }
 
 void BufferCache::ProcessFaultBuffer() {
@@ -530,7 +546,7 @@ bool BufferCache::SynchronizeMemory(const Buffer* arena, VAddr device_addr, u32 
     if (src_buffer) {
         runtime.CopyBuffer(src_buffer, arena, copies);
     }
-    if (is_texel_buffer && !is_written) {
+    if (!is_written && (is_texel_buffer || HasGpuModifiedImage(device_addr, size))) {
         return SynchronizeMemoryFromImage(arena, device_addr, size);
     }
     return false;
@@ -647,6 +663,11 @@ bool BufferCache::SynchronizeMemoryFromImage(const Buffer* arena, VAddr device_a
     ASSERT_MSG(device_addr == image.info.guest_address,
                "Texel buffer aliases image subresources {:x} : {:x}", device_addr,
                image.info.guest_address);
+    if (image.info.guest_size > size) {
+        const u64 first_block = device_addr >> block_shift;
+        const u64 last_block = (device_addr + image.info.guest_size - 1) >> block_shift;
+        EnsureResident(arena, first_block, last_block);
+    }
     const u64 arena_offset = arena->Offset(device_addr);
     boost::container::small_vector<vk::BufferImageCopy, 8> buffer_copies;
     for (u32 mip = 0; mip < image.info.resources.levels; mip++) {

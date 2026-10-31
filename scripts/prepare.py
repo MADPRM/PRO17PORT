@@ -169,8 +169,9 @@ def inspect_libc(path):
     return evidence
 
 
-def prepare(game, out):
-    source = read_self(game / 'eboot.bin')
+def prepare(game, out, eboot_override=None):
+    eboot_path = Path(eboot_override) / 'eboot.bin' if eboot_override and (Path(eboot_override) / 'eboot.bin').is_file() else (eboot_override if eboot_override and Path(eboot_override).is_file() else game / 'eboot.bin')
+    source = read_self(eboot_path)
     elf, header, ph, segments, missing = parse_self(source)
     loads = [p for p in ph if p['type'] in (1, 0x61000010)]
     def mapped(addr, size=8):
@@ -298,10 +299,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('game', type=Path)
     parser.add_argument('--out', type=Path, default=Path(__file__).resolve().parent.parent / 'out')
+    parser.add_argument('--patch-dir', type=Path, default=None)
     args = parser.parse_args()
     # The title is printed; a console or pipe in a legacy code page cannot encode every language.
     sys.stdout.reconfigure(errors='replace')
     try:
-        prepare(args.game, args.out)
+        prepare(args.game, args.out, args.patch_dir)
     except (ValueError, OSError, StopIteration, KeyError, IndexError) as error:
         parser.exit(1, f'prepare failed: {error}\n')

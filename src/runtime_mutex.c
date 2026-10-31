@@ -274,6 +274,7 @@ uintptr_t runtime_mutex_resolve(const char *name) {
     if (!strcmp(name, "iMp8QpE+XO4#libkernel")) return (uintptr_t)attr_type;
     if (!strcmp(name, "smWEktiyyG0#libkernel")) return (uintptr_t)attr_destroy;
     if (!strcmp(name, "1FGvU0i9saQ#libkernel")) return (uintptr_t)attr_protocol;
+    if (!strcmp(name, "532IaQguwMg#libkernel")) return (uintptr_t)attr_protocol;
     if (!strcmp(name, "cmo1RIYva9o#libkernel")) return (uintptr_t)mutex_init;
     if (!strcmp(name, "9UK1vLZQft4#libkernel")) return (uintptr_t)mutex_lock;
     if (!strcmp(name, "upoVrzMHFeE#libkernel")) return (uintptr_t)mutex_trylock;

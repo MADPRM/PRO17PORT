@@ -18,7 +18,7 @@ import struct
 from prepare import parse_self, read_self, span, unpack
 from link_libc import encode_id
 
-DEFAULT_MODULES = ('libc.prx', 'libSceFios2.prx')
+DEFAULT_MODULES = ('libc.prx', 'libSceFios2.prx', 'libSceNpToolkit.prx')
 FS_LOAD = bytes.fromhex('64488b042500000000')  # mov rax, fs:[0]
 
 
@@ -94,8 +94,9 @@ def patch_fs_loads(image, ph, base):
     return patched
 
 
-def link(game, out, module_names=DEFAULT_MODULES):
-    main = module(game / 'eboot.bin')
+def link(game, out, module_names=DEFAULT_MODULES, patch_dir=None):
+    eboot_path = Path(patch_dir) / 'eboot.bin' if patch_dir and (Path(patch_dir) / 'eboot.bin').is_file() else game / 'eboot.bin'
+    main = module(eboot_path)
     raw = (out / 'boot.bin').read_bytes()
     magic, size, entry, ns, nr, ni, flags = unpack('<8s6Q', raw, 0)
     if magic != b'G3PROBE2':
@@ -249,5 +250,6 @@ if __name__ == '__main__':
     p.add_argument('game', type=Path)
     p.add_argument('--out', type=Path, default=Path(__file__).resolve().parent.parent / 'out')
     p.add_argument('--modules', nargs='*', default=list(DEFAULT_MODULES))
+    p.add_argument('--patch-dir', type=Path, default=None)
     a = p.parse_args()
-    link(a.game, a.out, a.modules)
+    link(a.game, a.out, a.modules, a.patch_dir)

@@ -10,6 +10,7 @@
 #include "spartanport_overlay.h"
 #include "spartanport_graphics.h"
 #include "spartanport_settings.h"
+#include "spartanport_png.h"
 
 namespace Frontend {
 
@@ -99,9 +100,24 @@ WindowSDL::WindowSDL(s32 width_, s32 height_, const char* title) : width{width_}
     window = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
     ASSERT_MSG(window, "Failed to create window: {}", SDL_GetError());
-    // spartanport: the game's own icon (run.py converts sce_sys/icon0.png to BMP, SDL's built-in format).
-    if (const char* icon_path = std::getenv("SPARTAN_WINDOW_ICON")) {
-        if (SDL_Surface* icon = SDL_LoadBMP(icon_path)) {
+    // Load the game's official icon (PNG or BMP) from SPARTAN_WINDOW_ICON or app0/sce_sys/icon0.png.
+    const char* icon_path = std::getenv("SPARTAN_WINDOW_ICON");
+    std::string fallback_icon;
+    if (!icon_path || !icon_path[0]) {
+        if (const char* app0 = std::getenv("SPARTAN_APP0")) {
+            fallback_icon = std::string(app0) + "/sce_sys/icon0.png";
+            icon_path = fallback_icon.c_str();
+        }
+    }
+    if (icon_path && icon_path[0]) {
+        SpartanPng::Image img;
+        if (SpartanPng::LoadRgba(icon_path, img) && img.width > 0 && img.height > 0) {
+            if (SDL_Surface* icon = SDL_CreateSurfaceFrom(img.width, img.height, SDL_PIXELFORMAT_RGBA32,
+                                                          img.rgba.data(), img.width * 4)) {
+                SDL_SetWindowIcon(window, icon);
+                SDL_DestroySurface(icon);
+            }
+        } else if (SDL_Surface* icon = SDL_LoadBMP(icon_path)) {
             SDL_SetWindowIcon(window, icon);
             SDL_DestroySurface(icon);
         }

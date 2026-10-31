@@ -998,6 +998,16 @@ vk::Format Instance::GetSupportedFormat(const vk::Format format,
                 return vk::Format::eR8G8Unorm;
             }
             break;
+        case vk::Format::eA2B10G10R10SnormPack32:
+            if (IsFormatSupported(vk::Format::eA2B10G10R10UnormPack32, flags)) {
+                return vk::Format::eA2B10G10R10UnormPack32;
+            }
+            break;
+        case vk::Format::eA2B10G10R10SintPack32:
+            if (IsFormatSupported(vk::Format::eA2B10G10R10UintPack32, flags)) {
+                return vk::Format::eA2B10G10R10UintPack32;
+            }
+            break;
         default:
             break;
         }

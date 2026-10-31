@@ -652,17 +652,31 @@ Frame* Presenter::PrepareFrame(const Libraries::VideoOut::BufferAttributeGroup& 
 
     // spartanport: FSR 1, RCAS and its strength come from the in-game menu, every frame.
     const auto& graphics = SpartanSettings::Get();
-    fsr_settings.enable = graphics.fsr1;
-    fsr_settings.use_rcas = graphics.rcas;
-    fsr_settings.rcas_attenuation = SpartanGraphics::RcasAttenuation(graphics.rcas_strength);
+    const int upscaler_mode = graphics.upscaler.load();
+    const bool is_native_res =
+        image_size.width == frame->width && image_size.height == frame->height;
+    const bool is_fsr_mode = upscaler_mode != SpartanSettings::UpscalerOff &&
+                             upscaler_mode != SpartanSettings::UpscalerTaa;
+    const bool want_fsr_upscale =
+        graphics.fsr1.load() || is_fsr_mode ||
+        (upscaler_mode == SpartanSettings::UpscalerTaa && !is_native_res);
+    fsr_settings.enable = want_fsr_upscale;
+    fsr_settings.use_rcas = graphics.rcas.load() || is_fsr_mode;
+    const int eff_rcas_strength = (upscaler_mode == SpartanSettings::UpscalerTaa)
+                                      ? std::min(graphics.rcas_strength.load(), 35)
+                                      : (upscaler_mode != SpartanSettings::UpscalerOff
+                                             ? std::max(graphics.rcas_strength.load(), 75)
+                                             : graphics.rcas_strength.load());
+    fsr_settings.rcas_attenuation = SpartanGraphics::RcasAttenuation(eff_rcas_strength);
     SpartanSettings::Get().image_width = int(image_size.width);
     SpartanSettings::Get().image_height = int(image_size.height);
     SpartanSettings::Get().window_width = int(frame->width);
     SpartanSettings::Get().window_height = int(frame->height);
     SpartanSettings::Get().rcas_applied =
         fsr_settings.use_rcas &&
-        SpartanGraphics::FsrPassRuns(fsr_settings.enable, true, int(image_size.width), int(image_size.height),
-                                  int(frame->width), int(frame->height));
+        SpartanGraphics::FsrPassRuns(fsr_settings.enable, fsr_settings.use_rcas,
+                                     int(image_size.width), int(image_size.height),
+                                     int(frame->width), int(frame->height));
     image_view = fsr_pass.Render(cmdbuf, image_view, image_size, {frame->width, frame->height},
                                  fsr_settings, frame->is_hdr);
 
@@ -670,6 +684,9 @@ Frame* Presenter::PrepareFrame(const Libraries::VideoOut::BufferAttributeGroup& 
     // the post process pass still sRGB encoded and has to be decoded there instead.
     pp_settings.srgb_input =
         attribute.attrib.pixel_format == Libraries::VideoOut::PixelFormat::A2R10G10B10Srgb;
+    pp_settings.aa_mode = (upscaler_mode == SpartanSettings::UpscalerTaa)
+                              ? 1u
+                              : (upscaler_mode != SpartanSettings::UpscalerOff ? 2u : 0u);
     // spartanport: black bars around a cutscene when the render resolution is not 16:9 (movie_bars.h).
     pp_settings.picture = MovieBars::Cutscenes().Bars(image_size.width, image_size.height,
                                                       MovieBars::NowMs());
@@ -1191,6 +1208,18 @@ void Presenter::SetExpectedGameSize(s32 width, s32 height) {
     if (width <= 0 || height <= 0) {
         return; // no surface (minimized window): keep the last frame size
     }
+    const auto& graphics = SpartanSettings::Get();
+    const int out_idx = std::clamp(graphics.output_res.load(), 0, SpartanSettings::OutputCount - 1);
+    s32 target_w = SpartanSettings::OutputWidths[out_idx];
+    s32 target_h = SpartanSettings::OutputHeights[out_idx];
+    if (graphics.upscaler.load() != SpartanSettings::UpscalerOff && target_w <= 1920 && width <= 1920) {
+        // Ensure EASU spatial upscaling + supersampling runs visibly even on a 1080p screen when an upscaler is active
+        target_w = 2560;
+        target_h = 1440;
+    }
+    width = std::max(width, target_w);
+    height = std::max(height, target_h);
+
     const float ratio = (float)width / (float)height;
 
     expected_frame_height = height;

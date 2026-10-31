@@ -1,4 +1,33 @@
 #include <winuser.h>
+#include <winver.h>
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "spartanport-probe.manifest"
 // The first icon is the one Explorer and the game window show.
-1 ICON "../../launcher/spartanport.ico"
+1 ICON "pes2017.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     1,7,0,0
+PRODUCTVERSION  1,7,0,0
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName",      "Konami Digital Entertainment\0"
+            VALUE "FileDescription",  "Pro Evolution Soccer 2017\0"
+            VALUE "FileVersion",      "1.07.0.0\0"
+            VALUE "InternalName",     "PES2017\0"
+            VALUE "OriginalFilename", "PES2017.exe\0"
+            VALUE "ProductName",      "Pro Evolution Soccer 2017\0"
+            VALUE "ProductVersion",   "1.07.0.0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
