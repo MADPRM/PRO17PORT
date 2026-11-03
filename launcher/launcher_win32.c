@@ -45,31 +45,62 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         SetEnvironmentVariableW(L"PATH", new_path);
     }
 
-    wchar_t local_py[MAX_PATH];
-    wsprintfW(local_py, L"%s\\python\\pythonw.exe", dir_path);
+    wchar_t local_appdata[MAX_PATH];
+    wchar_t prog_files[MAX_PATH];
+    local_appdata[0] = L'\0';
+    prog_files[0] = L'\0';
+    GetEnvironmentVariableW(L"LOCALAPPDATA", local_appdata, MAX_PATH);
+    GetEnvironmentVariableW(L"ProgramFiles", prog_files, MAX_PATH);
 
-    const wchar_t* py_candidates[] = {
-        local_py,
-        L"D:\\MSYS2\\clang64\\bin\\python3w.exe",
-        L"D:\\MSYS2\\clang64\\bin\\pythonw.exe",
-        L"D:\\MSYS2\\clang64\\bin\\python3.exe",
-        L"pythonw.exe",
-        L"python3w.exe",
-        L"python.exe",
-        L"py.exe",
-    };
+    wchar_t py_paths[20][MAX_PATH];
+    int py_count = 0;
 
-    int candidate_count = (int)(sizeof(py_candidates) / sizeof(py_candidates[0]));
+    // 1. Local embedded python folder next to launcher
+    wsprintfW(py_paths[py_count++], L"%s\\python\\pythonw.exe", dir_path);
+    wsprintfW(py_paths[py_count++], L"%s\\python\\python.exe", dir_path);
+
+    // 2. MSYS2 clang64 developer binaries
+    wsprintfW(py_paths[py_count++], L"D:\\MSYS2\\clang64\\bin\\python3w.exe");
+    wsprintfW(py_paths[py_count++], L"D:\\MSYS2\\clang64\\bin\\pythonw.exe");
+    wsprintfW(py_paths[py_count++], L"D:\\MSYS2\\clang64\\bin\\python3.exe");
+
+    // 3. Common Windows Python install locations (Python 3.14 down to 3.8)
+    const wchar_t* ver_tags[] = { L"314", L"313", L"312", L"311", L"310", L"39", L"38" };
+    for (int v = 0; v < 7; ++v) {
+        if (local_appdata[0]) {
+            wchar_t cand[MAX_PATH];
+            wsprintfW(cand, L"%s\\Programs\\Python\\Python%s\\pythonw.exe", local_appdata, ver_tags[v]);
+            if (file_exists(cand)) {
+                wcscpy_s(py_paths[py_count++], MAX_PATH, cand);
+                break;
+            }
+        }
+        if (prog_files[0]) {
+            wchar_t cand[MAX_PATH];
+            wsprintfW(cand, L"%s\\Python%s\\pythonw.exe", prog_files, ver_tags[v]);
+            if (file_exists(cand)) {
+                wcscpy_s(py_paths[py_count++], MAX_PATH, cand);
+                break;
+            }
+        }
+    }
+
+    // 4. System PATH executables
+    wsprintfW(py_paths[py_count++], L"pythonw.exe");
+    wsprintfW(py_paths[py_count++], L"python3w.exe");
+    wsprintfW(py_paths[py_count++], L"python.exe");
+    wsprintfW(py_paths[py_count++], L"py.exe");
+
     PROCESS_INFORMATION pi;
 
-    for (int i = 0; i < candidate_count; ++i) {
+    for (int i = 0; i < py_count; ++i) {
         STARTUPINFOW si;
         ZeroMemory(&si, sizeof(si));
         si.cb = sizeof(si);
         ZeroMemory(&pi, sizeof(pi));
 
         wchar_t cmd_line[MAX_PATH * 3];
-        wsprintfW(cmd_line, L"\"%s\" \"%s\"", py_candidates[i], script_path);
+        wsprintfW(cmd_line, L"\"%s\" \"%s\"", py_paths[i], script_path);
 
         BOOL ok = CreateProcessW(
             NULL,

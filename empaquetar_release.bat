@@ -43,14 +43,16 @@ copy /y "launcher_pes2017.py" "%STAGE_DIR%\" >nul
 copy /y "jugar_pes2017.bat" "%STAGE_DIR%\" >nul
 copy /y "pes2017.ini" "%STAGE_DIR%\" >nul
 copy /y "README.md" "%STAGE_DIR%\" >nul
-copy /y "scripts\prepare.py" "%STAGE_DIR%\scripts\" >nul
-copy /y "scripts\link_modules.py" "%STAGE_DIR%\scripts\" >nul
-copy /y "scripts\content_profile.py" "%STAGE_DIR%\scripts\" >nul
+copy /y "scripts\*.py" "%STAGE_DIR%\scripts\" >nul
 
 echo [4/4] Creando archivo comprimido ZIP para GitHub Releases...
-python -c "import zipfile, os; from pathlib import Path; src = Path(r'%STAGE_DIR%'); dst = Path(r'%ZIP_FILE%'); z = zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED); [z.write(Path(r)/f, Path(r).relative_to(src)/f) for r, _, files in os.walk(src) for f in files]; z.close()" 2>nul
+if exist "D:\MSYS2\clang64\bin\python3.exe" (
+    D:\MSYS2\clang64\bin\python3.exe -c "import zipfile, os; from pathlib import Path; src = Path(r'%STAGE_DIR%'); dst = Path(r'%ZIP_FILE%'); z = zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED); [z.write(Path(r)/f, Path(r).relative_to(src)/f) for r, _, files in os.walk(src) for f in files]; z.close()"
+) else (
+    python -c "import zipfile, os; from pathlib import Path; src = Path(r'%STAGE_DIR%'); dst = Path(r'%ZIP_FILE%'); z = zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED); [z.write(Path(r)/f, Path(r).relative_to(src)/f) for r, _, files in os.walk(src) for f in files]; z.close()" 2>nul
+)
 if not exist "%ZIP_FILE%" (
-    powershell -NoProfile -Command "Compress-Archive -Path '%STAGE_DIR%\*' -DestinationPath '%ZIP_FILE%' -Force"
+    powershell -NoProfile -Command "$ProgressPreference = 'SilentlyContinue'; Compress-Archive -Path '%STAGE_DIR%\*' -DestinationPath '%ZIP_FILE%' -Force"
 )
 
 echo.

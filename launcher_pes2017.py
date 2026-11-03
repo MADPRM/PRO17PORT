@@ -31,13 +31,43 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-BASE_DIR = Path(__file__).resolve().parent
+
+def attach_stdio():
+    """Garantiza que existan sys.stdout y sys.stderr al ejecutarse con pythonw.exe sin consola."""
+    if sys.platform != "win32":
+        return
+    import msvcrt
+    for name, std in (("stdout", -11), ("stderr", -12)):
+        if getattr(sys, name) is not None:
+            continue
+        stream = None
+        try:
+            handle = ctypes.windll.kernel32.GetStdHandle(std)
+            if handle and handle != ctypes.c_void_p(-1).value:
+                stream = open(
+                    msvcrt.open_osfhandle(handle, os.O_WRONLY),
+                    "w",
+                    encoding="utf-8",
+                    errors="replace",
+                    buffering=1,
+                )
+        except Exception:
+            stream = None
+        setattr(sys, name, stream or open(os.devnull, "w", encoding="utf-8"))
+
+
+attach_stdio()
+
+BASE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 if (BASE_DIR / "PRO17PORT").is_dir():
     ENGINE_DIR = BASE_DIR / "PRO17PORT"
+elif (BASE_DIR / "out").is_dir():
+    ENGINE_DIR = BASE_DIR
 elif (BASE_DIR / "src").is_dir():
     ENGINE_DIR = BASE_DIR
 else:
-    ENGINE_DIR = BASE_DIR / "PRO17PORT" 
+    ENGINE_DIR = BASE_DIR
+
 OUT_DIR = ENGINE_DIR / "out"
 SETTINGS_FILE = BASE_DIR / "pes2017_launcher.json"
 INI_FILE = ENGINE_DIR / "pes2017.ini"
@@ -348,6 +378,8 @@ class PES2017Launcher:
                 defaults.update(saved)
             except Exception:
                 pass
+        if "\\PRO17PORT\\out\\user" in defaults.get("user_dir", "") and not (ENGINE_DIR / "PRO17PORT").is_dir():
+            defaults["user_dir"] = str(OUT_DIR / "user")
         if not defaults["game_dir"] and auto_base:
             defaults["game_dir"] = auto_base
         if not defaults["patch_dir"]:
@@ -402,7 +434,7 @@ class PES2017Launcher:
             "master_volume": str(data["master_volume"]),
             "audio_channels": data["audio_channels"],
             "deferred_readback": "1",
-            "stale_readback": "1",
+            "stale_readback": "0",
         })
         return data
 
@@ -1023,16 +1055,15 @@ class PES2017Launcher:
         ver = read_sfo(sfo_dir / "sce_sys" / "param.sfo").get("APP_VER", "")
         cached_boot = OUT_DIR / f"boot-linked-{ver}.bin"
 
-        python_exe = str(MSYS2_BIN / "python3.exe") if (MSYS2_BIN / "python3.exe").is_file() else sys.executable
-        cmd_prep = [python_exe, str(ENGINE_DIR / "scripts" / "prepare.py"), str(game_dir), "--out", str(OUT_DIR)]
-        cmd_link = [python_exe, str(ENGINE_DIR / "scripts" / "link_modules.py"), str(game_dir), "--out", str(OUT_DIR)]
-        if patch_dir and (patch_dir / "eboot.bin").is_file():
-            cmd_prep += ["--patch-dir", str(patch_dir)]
-            cmd_link += ["--patch-dir", str(patch_dir)]
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        scripts_dir = ENGINE_DIR / "scripts"
+        if str(scripts_dir) not in sys.path:
+            sys.path.insert(0, str(scripts_dir))
+        import prepare as prep_mod
+        import link_modules as link_mod
 
-        creation_flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        subprocess.run(cmd_prep, check=True, cwd=str(ENGINE_DIR), creationflags=creation_flags)
-        subprocess.run(cmd_link, check=True, cwd=str(ENGINE_DIR), creationflags=creation_flags)
+        prep_mod.prepare(game_dir, OUT_DIR, eboot_override=patch_dir)
+        link_mod.link(game_dir, OUT_DIR, patch_dir=patch_dir)
 
         if ver:
             try:
@@ -1070,22 +1101,21 @@ class PES2017Launcher:
                 boot_bin = self.ensure_boot_image(game_dir, patch_dir)
                 content_bin = OUT_DIR / "content.bin"
                 if not content_bin.is_file():
-                    python_exe = str(MSYS2_BIN / "python3.exe") if (MSYS2_BIN / "python3.exe").is_file() else sys.executable
-                    creation_flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-                    subprocess.run(
-                        [python_exe, str(ENGINE_DIR / "scripts" / "content_profile.py"), str(game_dir), "--out", str(OUT_DIR)],
-                        check=True,
-                        cwd=str(ENGINE_DIR),
-                        creationflags=creation_flags,
-                    )
+                    scripts_dir = ENGINE_DIR / "scripts"
+                    if str(scripts_dir) not in sys.path:
+                        sys.path.insert(0, str(scripts_dir))
+                    import content_profile as cp_mod
+                    cp_mod.prepare(game_dir, OUT_DIR)
 
                 env = os.environ.copy()
+                env["PATH"] = f"{OUT_DIR};{env.get('PATH', '')}"
                 if MSYS2_BIN.is_dir():
-                    env["PATH"] = f"{MSYS2_BIN};{MSYS2_USR};{env.get('PATH', '')}"
+                    env["PATH"] = f"{MSYS2_BIN};{MSYS2_USR};{env['PATH']}"
                 env["SPARTAN_CONFIG"] = str(INI_FILE)
-                env["SPARTAN_PARTIAL_HEIGHT_VIEWS"] = "0"
-                env["SPARTAN_DEFERRED_READBACK"] = "1"
-                env["SPARTAN_STALE_READBACK"] = "1"
+                # Valores por defecto; una variable ya definida en el entorno tiene prioridad (pruebas A/B).
+                env.setdefault("SPARTAN_PARTIAL_HEIGHT_VIEWS", "0")
+                env.setdefault("SPARTAN_DEFERRED_READBACK", "1")
+                env.setdefault("SPARTAN_STALE_READBACK", "0")
                 env["SPARTAN_LANGUAGE"] = str(cfg["language"])
                 env["SPARTAN_AUDIO_VOLUME"] = str(cfg["master_volume"])
                 env["SPARTAN_AUDIO_CHANNELS"] = str(cfg["audio_channels"])
@@ -1105,9 +1135,11 @@ class PES2017Launcher:
 
                 game_exe = OUT_DIR / "PES2017.exe"
                 if not game_exe.is_file():
-                    game_exe = OUT_DIR / "PES2017.exe"
+                    raise FileNotFoundError(f"No se encontró el ejecutable principal PES2017.exe en {OUT_DIR}")
 
                 user_dir = Path(cfg["user_dir"])
+                if "\\PRO17PORT\\out\\user" in str(user_dir) and not user_dir.parent.is_dir():
+                    user_dir = OUT_DIR / "user"
                 user_dir.mkdir(parents=True, exist_ok=True)
 
                 cmd = [
