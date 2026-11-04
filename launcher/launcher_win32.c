@@ -94,6 +94,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     PROCESS_INFORMATION pi;
 
     for (int i = 0; i < py_count; ++i) {
+        // Discard dummy Windows Store execution aliases (WindowsApps)
+        wchar_t resolved[MAX_PATH];
+        if (SearchPathW(NULL, py_paths[i], L".exe", MAX_PATH, resolved, NULL) > 0) {
+            if (wcsstr(resolved, L"WindowsApps") != NULL || wcsstr(resolved, L"windowsapps") != NULL) {
+                continue;
+            }
+        }
+
         STARTUPINFOW si;
         ZeroMemory(&si, sizeof(si));
         si.cb = sizeof(si);
@@ -116,6 +124,18 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         );
 
         if (ok) {
+            // Verify if the process didn't die immediately (e.g. broken alias or launch error)
+            DWORD wait_res = WaitForSingleObject(pi.hProcess, 350);
+            if (wait_res == WAIT_OBJECT_0) {
+                DWORD exit_code = 0;
+                GetExitCodeProcess(pi.hProcess, &exit_code);
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+                if (exit_code != 0) {
+                    continue;
+                }
+                return 0;
+            }
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
             return 0;
@@ -123,9 +143,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     }
 
     MessageBoxW(NULL,
-        L"Para iniciar el Launcher de PES 2017 se requiere tener instalado Python 3.\n\n"
-        L"Puedes descargarlo e instalarlo gratis desde python.org o la Microsoft Store.",
-        L"Pro Evolution Soccer 2017", MB_ICONINFORMATION | MB_OK);
+        L"No se encontró Python 3 instalado en el sistema para ejecutar el Launcher de PES 2017.\n\n"
+        L"Por favor descarga e instala Python 3 (marcando la opción 'Add python.exe to PATH'):\n"
+        L"https://www.python.org/downloads/\n\n"
+        L"Nota: Recuerda que también requieres tu carpeta del juego de PS4 (CUSA04957).\n\n"
+        L"--------------------------------------------------\n\n"
+        L"Python 3 was not found on your system to run the PES 2017 Launcher.\n\n"
+        L"Please install Python 3 (make sure to check 'Add python.exe to PATH'):\n"
+        L"https://www.python.org/downloads/\n\n"
+        L"Note: You also need your PS4 game dump folder (CUSA04957).",
+        L"Pro Evolution Soccer 2017 - Launcher", MB_ICONWARNING | MB_OK);
 
     return 1;
 }

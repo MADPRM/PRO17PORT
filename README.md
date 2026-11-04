@@ -39,7 +39,8 @@
 ## 🖥 Requisitos del Sistema
 
 * **Sistema Operativo:** Windows 10 / Windows 11 (64-bit).
-* **Procesador (CPU):** Procesador de 4 núcleos o superior con soporte AVX2 (Intel Core i5 4ª Gen / AMD Ryzen 1000 o superior).
+* **Procesador (CPU):** Procesador x86-64 con soporte **AVX y SSE4.2** (Intel Core 2ª Gen Sandy Bridge / AMD FX o AMD Ryzen superior). *(Nota: No requiere AVX2; la PS4 utiliza la arquitectura Jaguar con AVX 1.0).*
+* **Software:** Python 3 instalado en Windows (para la interfaz visual del launcher).
 * **Tarjeta Gráfica (GPU):** Compatible con **Vulkan 1.3**:
   * NVIDIA: GeForce GTX 900 / 1050 o superior.
   * AMD: Radeon RX 400 / Vega / RDNA o superior.

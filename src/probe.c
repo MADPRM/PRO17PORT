@@ -55,7 +55,15 @@ static void loader_report_hook(void) {
 }
 int vulkan_smoke(void);
 
-static void fail(const char *message) { fprintf(stderr, "ERROR: %s\n", message); exit(1); }
+static void fail(const char *message) {
+    fprintf(stderr, "ERROR: %s\n", message);
+#ifdef _WIN32
+    wchar_t wmsg[512];
+    MultiByteToWideChar(CP_UTF8, 0, message, -1, wmsg, 512);
+    MessageBoxW(NULL, wmsg, L"Pro Evolution Soccer 2017 - Error", MB_ICONERROR | MB_OK);
+#endif
+    exit(1);
+}
 static uint64_t read64(FILE *f) {
     unsigned char b[8];
     if (fread(b, 1, 8, f) != 8) fail("truncated boot file");
@@ -937,6 +945,14 @@ static int cpu_supported(char *missing, size_t size) {
     if (cpu_missing_fatal(words, missing, size)) {
         printf("STOP: this CPU lacks instruction sets the game's code uses: %s "
                "(Intel Sandy Bridge 2011 or newer, or AMD FX or newer, is needed)\n", missing);
+#ifdef _WIN32
+        wchar_t wmsg[512];
+        _snwprintf(wmsg, sizeof(wmsg)/sizeof(wmsg[0]),
+            L"Tu procesador (CPU) no cuenta con instrucciones requeridas por el juego: %hs\n\n"
+            L"Requisito minimo de CPU: Intel Core (Sandy Bridge 2011 o superior) o AMD FX / Ryzen con soporte AVX y SSE4.2.\n"
+            L"El juego no puede ejecutarse en esta computadora.", missing);
+        MessageBoxW(NULL, wmsg, L"PRO17PORT - CPU incompatible", MB_OK | MB_ICONERROR);
+#endif
         return 0;
     }
     cpu_missing_sets = cpu_missing_rewritable(words, missing, size);
@@ -995,6 +1011,19 @@ static int describe_displays(void) {
 
 int main(int argc, char **argv) {
     setvbuf(stdout, NULL, _IONBF, 0);
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s boot.bin [--cpu-only] [--strict-imports] [--check-imports] [--content-profile file] [--app0 dir] [--user dir] [--patches file] [--isa-rewrite file] [--pause-menu R_UI.WAD] [--mount guest=host]... [--timeout seconds] | --vulkan-only | --cpu-features | --gamepad | --displays\n", argv[0]);
+#ifdef _WIN32
+        MessageBoxW(NULL,
+            L"PES2017.exe es el ejecutable de bajo nivel del port y requiere parametros de configuracion.\n\n"
+            L"Para jugar correctamente, por favor inicia el juego abriendo:\n"
+            L"   PES2017_Launcher.exe\n\n"
+            L"Asegurate de haber configurado tu dump de PS4 (CUSA04957 y su parche) antes de ejecutar.",
+            L"PRO17PORT - Informacion",
+            MB_OK | MB_ICONINFORMATION);
+#endif
+        return 1;
+    }
 #ifndef _WIN32
     /* Keep host heap objects handed to the guest (thread handles, TLS) in the
        non-PIE brk heap, i.e. below 1 TiB: the guest packs pointers into 40 bits. */
