@@ -688,9 +688,8 @@ void TextureCache::InvalidateMemoryFromGPU(VAddr address, size_t max_size) {
     ResolveReadbacks(address, max_size, true, ReadbackSource::GpuPartialWrite);
     std::scoped_lock lock{mutex};
     ForEachImageInRegion(address, max_size, [&](ImageId image_id, Image& image) {
-        // Only consider images that match base address.
-        // TODO: Maybe also consider subresources
-        if (image.info.guest_address != address) {
+        // Invalidate any cached image overlapping the GPU-written range (kits, faces, render targets).
+        if (!image.Overlaps(address, max_size)) {
             return;
         }
         // Ensure image is reuploaded when accessed again.
