@@ -7,6 +7,21 @@
  * they stay unresolved so the probe stops at the first use instead of hiding it. */
 #include "runtime.h"
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#define usb_stat _stat64
+#define usb_mkdir(p) _mkdir(p)
+typedef struct _stat64 UsbStat;
+#else
+#include <unistd.h>
+#define usb_stat stat
+#define usb_mkdir(p) mkdir((p), 0755)
+typedef struct stat UsbStat;
+#endif
 #define OFF_NP_SIGNED_OUT ((int32_t)0x80550006)
 #define OFF_HTTP_NETWORK ((int32_t)0x80431063)
 #define OFF_NET_CTL_NOT_CONNECTED ((int32_t)0x80412108)
@@ -18,6 +33,96 @@ static ABI int32_t off_netctl(void) { return OFF_NET_CTL_NOT_CONNECTED; }
 static ABI int32_t off_net_inval(void) { return OFF_NET_EINVAL; }
 /* libScePosix sockets: no network, every call fails with ENETUNREACH (51 on the PS4). */
 static ABI int64_t off_posix_net(void) { *runtime_errno()=51; return -1; }
+
+/* Virtual USB storage (/usb0 -> ./WEPES or <user>/WEPES) for PES 2017 Option Files. */
+static int usb_dialog_status = 0;
+static int usb_is_dir(const char *path) {
+    UsbStat st;
+    return usb_stat(path, &st) == 0 && (st.st_mode & S_IFDIR) != 0;
+}
+static void usb_resolve_wepes(char *out, size_t size) {
+    if (usb_is_dir("WEPES")) { snprintf(out, size, "WEPES"); return; }
+    char user_wepes[512];
+    snprintf(user_wepes, sizeof(user_wepes), "%s/WEPES", runtime_file_user_dir());
+    if (usb_is_dir(user_wepes)) { snprintf(out, size, "%s", user_wepes); return; }
+    usb_mkdir("WEPES");
+    if (usb_is_dir("WEPES")) { snprintf(out, size, "WEPES"); return; }
+    usb_mkdir(user_wepes);
+    snprintf(out, size, "%s", user_wepes);
+}
+static const char *usb_strip_wepes(const char *path) {
+    if (!path) return "";
+    while (*path == '/' || *path == '\\') ++path;
+    if ((path[0] == 'W' || path[0] == 'w') && (path[1] == 'E' || path[1] == 'e') &&
+        (path[2] == 'P' || path[2] == 'p') && (path[3] == 'E' || path[3] == 'e') &&
+        (path[4] == 'S' || path[4] == 's') &&
+        (path[5] == '\0' || path[5] == '/' || path[5] == '\\')) {
+        path += 5;
+        while (*path == '/' || *path == '\\') ++path;
+    }
+    return path;
+}
+static ABI int32_t usb_init(void *param) { (void)param; return 0; }
+static ABI int32_t usb_term(void) { return 0; }
+static ABI int32_t usb_get_device_list(uint32_t *list, int32_t *num) {
+    if (list) list[0] = 1;
+    if (num) *num = 1;
+    return 0;
+}
+static ABI int32_t usb_get_device_info(uint32_t dev_id, void *info) {
+    (void)dev_id;
+    if (info) {
+        uint64_t *u64 = (uint64_t *)info;
+        u64[0] = 16ULL * 1024ULL * 1024ULL * 1024ULL;
+        u64[1] = 16ULL * 1024ULL * 1024ULL * 1024ULL;
+    }
+    return 0;
+}
+static ABI int32_t usb_is_exist(uint32_t dev_id, const char *path, int32_t *exist) {
+    (void)dev_id;
+    char wepes[512], full[768];
+    usb_resolve_wepes(wepes, sizeof(wepes));
+    const char *sub = usb_strip_wepes(path);
+    if (sub[0]) snprintf(full, sizeof(full), "%s/%s", wepes, sub);
+    else snprintf(full, sizeof(full), "%s", wepes);
+    size_t len = strlen(full);
+    while (len > 1 && (full[len - 1] == '/' || full[len - 1] == '\\')) full[--len] = '\0';
+    UsbStat st;
+    int found = (usb_stat(full, &st) == 0) ? 1 : 0;
+    if (exist) *exist = found;
+    return found;
+}
+static ABI int32_t usb_request_map(uint32_t dev_id, const char *target_dir, uint32_t access_mode,
+                                   uint32_t options, char *mount_point, uint64_t *avail_size) {
+    (void)dev_id; (void)access_mode; (void)options;
+    char wepes[512], host[768];
+    usb_resolve_wepes(wepes, sizeof(wepes));
+    const char *sub = usb_strip_wepes(target_dir);
+    if (sub[0]) snprintf(host, sizeof(host), "%s/%s", wepes, sub);
+    else snprintf(host, sizeof(host), "%s", wepes);
+    runtime_file_mount("/usb0", host);
+    if (mount_point) snprintf(mount_point, 16, "/usb0");
+    if (avail_size) *avail_size = 16ULL * 1024ULL * 1024ULL * 1024ULL;
+    printf("Runtime: UsbStorage mounted /usb0 -> %s (target=%s)\n", host, target_dir ? target_dir : "");
+    return 0;
+}
+static ABI int32_t usb_request_unmap(uint32_t dev_id, const char *mount_point) {
+    (void)dev_id;
+    runtime_file_unmount((mount_point && mount_point[0]) ? mount_point : "/usb0");
+    return 0;
+}
+static ABI int32_t usb_dialog_init(void) { usb_dialog_status = 0; return 0; }
+static ABI int32_t usb_dialog_term(void) { usb_dialog_status = 0; return 0; }
+static ABI int32_t usb_dialog_open(const void *param) { (void)param; usb_dialog_status = 3; return 0; }
+static ABI int32_t usb_dialog_update_status(void) { return usb_dialog_status; }
+static ABI int32_t usb_dialog_get_result(void *result) {
+    if (result) {
+        *(int32_t *)((char *)result + 8) = 0;
+        *(uint32_t *)((char *)result + 12) = 1;
+    }
+    return 0;
+}
+static ABI int32_t usb_dialog_close(void) { usb_dialog_status = 0; return 0; }
 static const RuntimeExport exports[]={
     {"socket",off_posix_net}, {"bind",off_posix_net}, {"listen",off_posix_net}, {"accept",off_posix_net},
     {"connect",off_posix_net}, {"send",off_posix_net}, {"sendto",off_posix_net}, {"recv",off_posix_net},
@@ -36,10 +141,10 @@ static const RuntimeExport exports[]={
     {"sceNpSnsFacebookDialogGetResult",off_ok},
     {"sceNetResolverAbort",off_ok},
     {"sceInvitationDialogTerminate",off_ok},
-    {"sceUsbStorageInit",off_ok},
+    {"sceUsbStorageInit",usb_init},
     {"sceSigninDialogUpdateStatus",off_ok},
     {"sceNpSnsFacebookDialogTerminate",off_ok},
-    {"sceUsbStorageDialogOpen",off_ok},
+    {"sceUsbStorageDialogOpen",usb_dialog_open},
     {"sceSharePlaySetProhibition",off_ok},
     {"sceCoredumpWriteUserData",off_ok},
     {"sceVoicePausePortAll",off_ok},
@@ -47,31 +152,31 @@ static const RuntimeExport exports[]={
     {"sceErrorDialogClose",off_ok},
     {"sceVideoRecordingSetInfo",off_ok},
     {"sceNpSnsFacebookDialogUpdateStatus",off_ok},
-    {"sceUsbStorageRequestUnmap",off_ok},
+    {"sceUsbStorageRequestUnmap",usb_request_unmap},
     {"sceWebBrowserDialogOpen",off_ok},
-    {"sceUsbStorageGetDeviceInfo",off_ok},
+    {"sceUsbStorageGetDeviceInfo",usb_get_device_info},
     {"sceWebBrowserDialogUpdateStatus",off_ok},
     {"sceNpSnsFacebookDialogOpen",off_ok},
     {"sceGameCustomDataDialogTerminate",off_ok},
-    {"sceUsbStorageRequestMap",off_ok},
-    {"sceUsbStorageDialogInitialize",off_ok},
+    {"sceUsbStorageRequestMap",usb_request_map},
+    {"sceUsbStorageDialogInitialize",usb_dialog_init},
     {"sceVoiceResumePortAll",off_ok},
     {"sceNpCheckCallbackForLib",off_ok},
     {"sceSigninDialogOpen",off_ok},
     {"sceWebBrowserDialogInitialize",off_ok},
-    {"sceUsbStorageDialogClose",off_ok},
+    {"sceUsbStorageDialogClose",usb_dialog_close},
     {"sceCoredumpGetStopInfoCpu",off_ok},
     {"sceSigninDialogTerminate",off_ok},
     {"sceErrorDialogOpen",off_ok},
     {"sceSigninDialogClose",off_ok},
     {"sceCoredumpAttachMemoryRegionAsUserFile",off_ok},
     {"sceSigninDialogInitialize",off_ok},
-    {"sceUsbStorageDialogUpdateStatus",off_ok},
-    {"sceUsbStorageGetDeviceList",off_ok},
+    {"sceUsbStorageDialogUpdateStatus",usb_dialog_update_status},
+    {"sceUsbStorageGetDeviceList",usb_get_device_list},
     {"sceSigninDialogGetResult",off_ok},
     {"sceCoredumpGetStopInfoGpu",off_ok},
     {"sceNpCommerceDialogClose",off_ok},
-    {"sceUsbStorageDialogTerminate",off_ok},
+    {"sceUsbStorageDialogTerminate",usb_dialog_term},
     {"sceWebBrowserDialogTerminate",off_ok},
     {"sceSharePlayGetCurrentConnectionInfo",off_ok},
     {"sceGameCustomDataDialogUpdateStatus",off_ok},
@@ -81,12 +186,12 @@ static const RuntimeExport exports[]={
     {"sceGameCustomDataDialogGetResult",off_ok},
     {"sceNpSnsFacebookDialogInitialize",off_ok},
     {"sceScreenShotDisable",off_ok},
-    {"sceUsbStorageIsExist",off_ok},
+    {"sceUsbStorageIsExist",usb_is_exist},
     {"sceSharePlayTerminate",off_ok},
-    {"sceUsbStorageDialogGetResult",off_ok},
+    {"sceUsbStorageDialogGetResult",usb_dialog_get_result},
     {"sceWebBrowserDialogGetResult",off_ok},
     {"sceNpProfileDialogClose",off_ok},
-    {"sceUsbStorageTerm",off_ok},
+    {"sceUsbStorageTerm",usb_term},
     {"sceImeDialogGetPanelSize",off_ok},
     {"sceErrorDialogUpdateStatus",off_ok},
     {"sceInvitationDialogClose",off_ok},

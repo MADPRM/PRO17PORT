@@ -67,6 +67,17 @@
 
 ---
 
+## 📦 Cómo Importar Option Files (Licencias, Kits y Escudos — `WEPES`)
+
+El port emula una unidad USB virtual (`/usb0`) compatible con los **Option Files de PES 2017 para PS4**:
+
+1. Crea una carpeta llamada `WEPES` junto a `PES2017_Launcher.exe` (o haz clic en el botón **Carpeta WEPES (Option Files)** en el launcher).
+2. Copia dentro de `WEPES/` los archivos `.bin` / `.ted` y las imágenes `.png` de tu Option File de PS4.
+3. Inicia el juego y ve a **Editar → Gestión de Datos → Importar/Exportar → Importar equipo** (o **Importar imágenes**).
+4. El dispositivo USB virtual será detectado automáticamente sin necesidad de conectar un pendrive físico.
+
+---
+
 ## 🛠 Compilación desde el Código Fuente
 
 El proyecto utiliza el entorno nativo **MSYS2 Clang64** en Windows:

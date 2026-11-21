@@ -123,6 +123,12 @@ static int translate(const char *guest,char *out,size_t size) {
         }
     }
     pthread_mutex_unlock(&lock);
+#ifdef _WIN32
+    if (!result) {
+        size_t len=strlen(out);
+        while (len>1 && (out[len-1]=='/' || out[len-1]=='\\') && !(len==3 && out[1]==':')) out[--len]=0;
+    }
+#endif
     if (result==ENOENT) fprintf(stderr,"Runtime: no mount for guest path %s\n",guest);
     return result;
 }
@@ -186,7 +192,8 @@ static void convert_stat(const HostStat *s,GuestStat *g) {
 #ifdef _WIN32
     /* FreeBSD mode bits: directories rwxr-xr-x, files rw-r--r--. */
     g->mode=(uint16_t)(S_ISDIR(s->st_mode) ? 0040755 : 0100644);
-    g->blocks=(s->st_size+511)/512; g->blksize=4096;
+    if (S_ISDIR(s->st_mode) && g->size==0) g->size=4096;
+    g->blocks=(g->size+511)/512; g->blksize=4096;
     g->atime=(GuestTimespec){s->st_atime,0};
     g->mtime=(GuestTimespec){s->st_mtime,0};
     g->ctime=(GuestTimespec){s->st_ctime,0};

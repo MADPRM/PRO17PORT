@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PRO EVOLUTION SOCCER 2017 — PC Launcher Oficial
-Interfaz moderna con barra lateral, portada oficial de PES 2017, detección
-inteligente de Carpeta Base (CUSA04957) y Parche/DataPacks (CUSA04957-patch)
-por separado sin fusionar carpetas, y ajustes gráficos/audio.
+PRO EVOLUTION SOCCER 2017 — PC Launcher Oficial (PRO17PORT)
+Diseño Sports Broadcast · Bento Grid con barra lateral de iconos,
+detección independiente de Carpeta Base (CUSA04957) y Parche (CUSA04957-patch),
+soporte nativo de Option Files (WEPES) y ajustes gráficos/audio Vulkan.
 """
 import ctypes
 import json
@@ -75,57 +75,75 @@ LEGACY_INI_FILE = ENGINE_DIR / "pes2017.ini"
 MSYS2_BIN = Path(r"D:\MSYS2\clang64\bin")
 MSYS2_USR = Path(r"D:\MSYS2\usr\bin")
 
-# Paleta de colores inspirada en la interfaz oficial de PES 2017 (Navy / Pitch Dark / Gold)
-BG_ROOT = "#070a10"
-BG_SIDEBAR = "#0b101b"
-BG_HERO = "#0d1424"
-BG_MAIN = "#0f172a"
-BG_CARD = "#162033"
-BG_CARD_HI = "#1e2c46"
-BG_INPUT = "#0c1322"
-BORDER_COLOR = "#263554"
-BORDER_GOLD = "#eab308"
+# ============================================================================
+# Paleta Sports Broadcast · Bento Grid (Grafito / Azul Marino / Carmesí / Oro)
+# ============================================================================
+BG_ROOT = "#0a0c10"
+BG_SIDEBAR = "#090b0f"
+BG_MAIN = "#0d0f14"
+BG_CARD = "#141821"
+BG_CARD_HI = "#1b212e"
+BG_CARD_HOVER = "#232b3c"
+BG_INPUT = "#0c0f16"
+BG_PILL = "#1a202d"
+BORDER_COLOR = "#242c3d"
+BORDER_SUBTLE = "#1a202e"
 
 FG_WHITE = "#f8fafc"
 FG_TEXT = "#e2e8f0"
 FG_MUTED = "#94a3b8"
 FG_DIM = "#64748b"
 
-ACCENT = "#facc15"        # Amarillo/Dorado icónico de PES 2017
+ACCENT = "#f5c518"        # Dorado metálico PES 2017
 ACCENT_HOVER = "#fde047"
-ACCENT_DARK = "#ca8a04"
-BLUE_ACCENT = "#38bdf8"
+ACCENT_DARK = "#b4860b"
+CRIMSON = "#be123c"
+CRIMSON_HI = "#e11d48"
+NAVY_DEEP = "#0c172b"
 GREEN_OK = "#22c55e"
+GREEN_BG = "#0e2a1d"
+GREEN_BORDER = "#166534"
+BLUE_ACCENT = "#38bdf8"
 WARN_COLOR = "#f59e0b"
 ERR_COLOR = "#ef4444"
 
 DISPLAY_MODES = [
     ("windowed", "Ventana (Windowed)"),
-    ("borderless", "Ventana sin bordes (Borderless Fullscreen)"),
-    ("fullscreen", "Pantalla completa exclusiva (Fullscreen)"),
+    ("borderless", "Ventana sin bordes (Borderless)"),
+    ("fullscreen", "Pantalla completa (Fullscreen)"),
 ]
 
 RESOLUTIONS = [
     ("720p", "1280 × 720 (HD 720p)"),
     ("900p", "1600 × 900 (HD+ 900p)"),
-    ("native", "1920 × 1080 (Full HD 1080p · Nativo)"),
+    ("native", "1920 × 1080 (Full HD 1080p)"),
     ("1440p", "2560 × 1440 (QHD 2K)"),
     ("4K", "3840 × 2160 (Ultra HD 4K)"),
     ("2560x1080", "2560 × 1080 (Ultrawide 21:9)"),
     ("3440x1440", "3440 × 1440 (Ultrawide 21:9)"),
 ]
 
+RES_SHORT = {
+    "720p": "1280×720",
+    "900p": "1600×900",
+    "native": "1920×1080",
+    "1440p": "2560×1440",
+    "4K": "3840×2160",
+    "2560x1080": "2560×1080",
+    "3440x1440": "3440×1440",
+}
+
 UPSCALERS = [
     ("off", "Desactivado (Nativo puro)"),
-    ("taa", "TAA + RCAS (Suavizado de bordes temporal + Nitidez)"),
-    ("fsr3", "AMD FSR (EASU Upscaling + RCAS Nitidez alta)"),
+    ("taa", "TAA + RCAS (Suavizado temporal + Nitidez)"),
+    ("fsr3", "AMD FSR (EASU Upscaling + RCAS Nitidez)"),
 ]
 
 FPS_LIMITS = [
-    ("60", "60 FPS (Velocidad oficial de simulación PES)"),
-    ("120", "120 FPS"),
-    ("144", "144 FPS"),
-    ("0", "Sin límite (Controlado por VSync)"),
+    ("60", "60 FPS (Recomendado — Velocidad oficial PES)"),
+    ("120", "120 FPS (⚠ Acelera el partido — Experimental)"),
+    ("144", "144 FPS (⚠ Acelera el partido — Experimental)"),
+    ("0", "Sin límite (⚠ Acelera si el monitor es >60 Hz)"),
 ]
 
 ANISO_OPTIONS = [
@@ -133,14 +151,14 @@ ANISO_OPTIONS = [
     ("2", "2x Anisotrópico"),
     ("4", "4x Anisotrópico"),
     ("8", "8x Anisotrópico (Recomendado)"),
-    ("16", "16x Anisotrópico (Máxima nitidez de césped)"),
+    ("16", "16x Anisotrópico (Máxima nitidez)"),
 ]
 
 AUDIO_CHANNELS = [
-    ("auto", "Automático (según dispositivo de Windows)"),
+    ("auto", "Automático (Windows)"),
     ("stereo", "Estéreo (2.0)"),
-    ("5.1", "Sonido Envolvente 5.1"),
-    ("7.1", "Sonido Envolvente 7.1"),
+    ("5.1", "Envolvente 5.1"),
+    ("7.1", "Envolvente 7.1"),
 ]
 
 LANGUAGES = [
@@ -205,10 +223,11 @@ def auto_detect_folders():
         BASE_DIR.parent / "PES2017byZC" / "CUSA04957",
     ]
     patch_candidates = [
-        BASE_DIR / "PES2017byZC" / "CUSA04957-patch",
-        BASE_DIR.parent / "PES2017byZC" / "CUSA04957-patch",
         BASE_DIR / "CUSA04957-patch",
         BASE_DIR.parent / "CUSA04957-patch",
+        ENGINE_DIR.parent / "CUSA04957-patch",
+        BASE_DIR / "PES2017byZC" / "CUSA04957-patch",
+        BASE_DIR.parent / "PES2017byZC" / "CUSA04957-patch",
         BASE_DIR / "CUSA04957-update",
         BASE_DIR / "patch",
     ]
@@ -226,8 +245,8 @@ def find_sibling_patch(game_dir: str) -> str:
         g.parent / f"{g.name}-patch",
         g.parent / f"{g.name}-update",
         g.parent / "PES2017byZC" / f"{g.name}-patch",
-        BASE_DIR / "PES2017byZC" / "CUSA04957-patch",
         BASE_DIR / "CUSA04957-patch",
+        BASE_DIR.parent / "CUSA04957-patch",
     ]
     for c in candidates:
         if c.is_dir() and c != g and (c / "eboot.bin").is_file():
@@ -274,19 +293,108 @@ def write_ini(path: Path, updates: dict):
             out.append(f"{k}={v}")
     content = "\n".join(out) + "\n"
     path.write_text(content, encoding="utf-8")
-    # Mantener sincronizado el archivo legado por si alguna herramienta lo consulta
     try:
         LEGACY_INI_FILE.write_text(content, encoding="utf-8")
     except Exception:
         pass
 
 
+def enable_dark_titlebar(window: tk.Tk):
+    """Activa la barra de título oscura nativa en Windows 10/11."""
+    if sys.platform != "win32":
+        return
+    try:
+        window.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        if not hwnd:
+            hwnd = window.winfo_id()
+        dark = ctypes.c_int(1)
+        for attr in (20, 19):
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, attr, ctypes.byref(dark), ctypes.sizeof(dark))
+        caption_color = ctypes.c_int(0x00100C0A)  # #0a0c10
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(caption_color), ctypes.sizeof(caption_color))
+    except Exception:
+        pass
+
+
+def draw_rounded_rect(canvas: tk.Canvas, x1, y1, x2, y2, r=12, **kwargs):
+    """Dibuja un rectángulo con esquinas redondeadas suaves en un tk.Canvas."""
+    r = max(1, min(r, (x2 - x1) / 2, (y2 - y1) / 2))
+    points = [
+        x1 + r, y1,
+        x2 - r, y1,
+        x2, y1,
+        x2, y1 + r,
+        x2, y2 - r,
+        x2, y2,
+        x2 - r, y2,
+        x1 + r, y2,
+        x1, y2,
+        x1, y2 - r,
+        x1, y1 + r,
+        x1, y1,
+    ]
+    return canvas.create_polygon(points, smooth=True, **kwargs)
+
+
+def bind_hover(widget, normal_bg, hover_bg, normal_fg=None, hover_fg=None):
+    def on_enter(_e):
+        if str(widget.cget("state")) != "disabled":
+            widget.configure(bg=hover_bg)
+            if hover_fg is not None:
+                widget.configure(fg=hover_fg)
+
+    def on_leave(_e):
+        widget.configure(bg=normal_bg)
+        if normal_fg is not None:
+            widget.configure(fg=normal_fg)
+
+    widget.bind("<Enter>", on_enter)
+    widget.bind("<Leave>", on_leave)
+
+
+class ToolTip:
+    """Tooltip minimalista oscuro para los iconos de la barra lateral."""
+    def __init__(self, widget, text: str):
+        self.widget = widget
+        self.text = text
+        self.tip = None
+        widget.bind("<Enter>", self._show, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+
+    def _show(self, _e=None):
+        if self.tip:
+            return
+        x = self.widget.winfo_rootx() + self.widget.winfo_width() + 8
+        y = self.widget.winfo_rooty() + (self.widget.winfo_height() // 2) - 13
+        self.tip = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        tw.configure(bg=BORDER_COLOR)
+        lbl = tk.Label(
+            tw,
+            text=self.text,
+            bg="#121620",
+            fg=FG_WHITE,
+            font=("Segoe UI", 9, "bold"),
+            padx=10,
+            pady=4,
+        )
+        lbl.pack(padx=1, pady=1)
+
+    def _hide(self, _e=None):
+        if self.tip:
+            self.tip.destroy()
+            self.tip = None
+
+
 class ModernToggle(tk.Canvas):
-    """Interruptor moderno estilo switch (On/Off) animado."""
-    def __init__(self, parent, variable: tk.BooleanVar, command=None, bg=BG_CARD):
-        super().__init__(parent, width=46, height=24, bg=bg, highlightthickness=0, cursor="hand2")
+    """Interruptor moderno redondeado (verde esmeralda / dorado)."""
+    def __init__(self, parent, variable: tk.BooleanVar, command=None, bg=BG_CARD, active_color=GREEN_OK):
+        super().__init__(parent, width=52, height=28, bg=bg, highlightthickness=0, cursor="hand2")
         self.variable = variable
         self.command = command
+        self.active_color = active_color
         self.bind("<Button-1>", self._toggle)
         self.variable.trace_add("write", lambda *_: self._draw())
         self._draw()
@@ -299,56 +407,96 @@ class ModernToggle(tk.Canvas):
     def _draw(self):
         self.delete("all")
         on = bool(self.variable.get())
-        track_color = ACCENT if on else "#334155"
-        knob_color = "#090d14" if on else "#cbd5e1"
-        # Pista redondeada (dos círculos + rectángulo central)
-        self.create_oval(2, 2, 22, 22, fill=track_color, outline="")
-        self.create_oval(24, 2, 44, 22, fill=track_color, outline="")
-        self.create_rectangle(12, 2, 34, 22, fill=track_color, outline="")
+        track = self.active_color if on else "#262e40"
+        border = "#4ade80" if (on and self.active_color == GREEN_OK) else (ACCENT_HOVER if on else "#344058")
+        knob = "#0b111c" if on else "#cbd5e1"
+        # Pista redondeada
+        self.create_oval(2, 2, 26, 26, fill=border, outline="")
+        self.create_oval(26, 2, 50, 26, fill=border, outline="")
+        self.create_rectangle(14, 2, 38, 26, fill=border, outline="")
+        self.create_oval(3, 3, 25, 25, fill=track, outline="")
+        self.create_oval(27, 3, 49, 25, fill=track, outline="")
+        self.create_rectangle(14, 3, 38, 25, fill=track, outline="")
         # Círculo móvil
-        cx = 25 if on else 5
-        self.create_oval(cx, 4, cx + 16, 20, fill=knob_color, outline="")
+        cx = 28 if on else 6
+        self.create_oval(cx, 6, cx + 18, 22, fill=knob, outline="")
+
+
+class ModernSlider(tk.Canvas):
+    """Deslizador personalizado moderno en Canvas para el volumen maestro."""
+    def __init__(self, parent, variable: tk.IntVar, from_=0, to=200, bg=BG_CARD, label_var=None):
+        super().__init__(parent, height=34, bg=bg, highlightthickness=0, cursor="hand2")
+        self.variable = variable
+        self.from_ = from_
+        self.to = to
+        self.label_var = label_var
+        self.bind("<Configure>", lambda _e: self._draw())
+        self.bind("<Button-1>", self._on_drag)
+        self.bind("<B1-Motion>", self._on_drag)
+        self.variable.trace_add("write", lambda *_: self._draw())
+
+    def _on_drag(self, event):
+        w = max(self.winfo_width(), 60)
+        pad = 12
+        ratio = max(0.0, min(1.0, (event.x - pad) / max(1, w - 2 * pad)))
+        val = int(round(self.from_ + ratio * (self.to - self.from_)))
+        self.variable.set(val)
+
+    def _draw(self):
+        self.delete("all")
+        w = max(self.winfo_width(), 60)
+        cy = 17
+        pad = 12
+        val = max(self.from_, min(self.to, int(self.variable.get())))
+        ratio = (val - self.from_) / max(1, (self.to - self.from_))
+        tx = pad + ratio * (w - 2 * pad)
+        if self.label_var is not None:
+            self.label_var.set(f"{val}%")
+
+        self.create_line(pad, cy, w - pad, cy, fill="#242c3d", width=6, capstyle="round")
+        if self.from_ < 100 < self.to:
+            x100 = pad + ((100 - self.from_) / (self.to - self.from_)) * (w - 2 * pad)
+            self.create_line(x100, cy - 8, x100, cy + 8, fill="#38445e", width=1)
+        if tx > pad:
+            self.create_line(pad, cy, tx, cy, fill=ACCENT, width=6, capstyle="round")
+        self.create_oval(tx - 10, cy - 10, tx + 10, cy + 10, fill="#1f2738", outline=ACCENT, width=2)
+        self.create_oval(tx - 5, cy - 5, tx + 5, cy + 5, fill=FG_WHITE, outline="")
 
 
 class PES2017Launcher:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("Pro Evolution Soccer 2017 — PC Launcher")
-        self.root.geometry("980x690")
-        self.root.minsize(920, 640)
+        self.root.title("PRO EVOLUTION SOCCER 2017 — PRO17PORT")
+        self.root.geometry("1040x660")
+        self.root.minsize(940, 610)
         self.root.configure(bg=BG_ROOT)
 
         self.icon_img = None
-        self.logo_small = None
-        self.hero_bg_img = None
+        self.active_page = "home"
+        self.play_enabled = True
+        self.play_hover = False
+        self.play_label = "▶   JUGAR PES 2017"
+        self.hero_badge_text = "DETECTANDO..."
+        self.hero_badge_color = ACCENT
+        self.hero_btn_box = (0, 0, 0, 0)
 
         self.settings = self.load_settings()
         self.load_brand_images()
         self.setup_styles()
         self.build_ui()
+        enable_dark_titlebar(self.root)
         self.refresh_detection()
 
     def load_brand_images(self):
-        """Carga el icono y arte oficial desde sce_sys/icon0.png y pic1.png."""
         game_dir = Path(self.settings.get("game_dir", "")) if self.settings.get("game_dir") else BASE_DIR / "CUSA04957"
         if not (game_dir / "sce_sys").is_dir():
-            game_dir = BASE_DIR / "CUSA04957"
-
+            game_dir = BASE_DIR.parent / "CUSA04957"
         icon_path = game_dir / "sce_sys" / "icon0.png"
         if icon_path.is_file():
             try:
                 full_icon = tk.PhotoImage(file=str(icon_path))
                 self.root.iconphoto(True, full_icon)
-                self.icon_img = full_icon.subsample(5, 5)   # ~102x102 para el Hero
-                self.logo_small = full_icon.subsample(9, 9) # ~56x56 para la barra lateral
-            except Exception:
-                pass
-
-        pic_path = game_dir / "sce_sys" / "pic0.png"
-        if pic_path.is_file():
-            try:
-                full_pic = tk.PhotoImage(file=str(pic_path))
-                self.hero_bg_img = full_pic.subsample(3, 3)
+                self.icon_img = full_icon
             except Exception:
                 pass
 
@@ -436,418 +584,497 @@ class PES2017Launcher:
             "deferred_readback": "1",
             "stale_readback": "0",
         })
+        self.refresh_graphics_summary()
         return data
 
     def setup_styles(self):
         style = ttk.Style(self.root)
         style.theme_use("clam")
         style.configure(".", background=BG_CARD, foreground=FG_TEXT, font=("Segoe UI", 10))
-        style.configure("TCombobox",
-                        fieldbackground=BG_INPUT,
-                        background=BG_CARD_HI,
-                        foreground=FG_WHITE,
-                        arrowcolor=ACCENT,
-                        bordercolor=BORDER_COLOR,
-                        lightcolor=BORDER_COLOR,
-                        darkcolor=BORDER_COLOR,
-                        padding=6)
-        style.map("TCombobox",
-                  fieldbackground=[("readonly", BG_INPUT)],
-                  foreground=[("readonly", FG_WHITE)],
-                  selectbackground=[("readonly", BG_INPUT)],
-                  selectforeground=[("readonly", FG_WHITE)])
+        style.configure(
+            "TCombobox",
+            fieldbackground=BG_INPUT,
+            background=BG_CARD_HI,
+            foreground=FG_WHITE,
+            arrowcolor=ACCENT,
+            bordercolor=BORDER_COLOR,
+            lightcolor=BORDER_COLOR,
+            darkcolor=BORDER_COLOR,
+            padding=6,
+        )
+        style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", BG_INPUT)],
+            foreground=[("readonly", FG_WHITE)],
+            selectbackground=[("readonly", BG_INPUT)],
+            selectforeground=[("readonly", FG_WHITE)],
+        )
         self.root.option_add("*TCombobox*Listbox.background", BG_INPUT)
         self.root.option_add("*TCombobox*Listbox.foreground", FG_WHITE)
         self.root.option_add("*TCombobox*Listbox.selectBackground", ACCENT)
-        self.root.option_add("*TCombobox*Listbox.selectForeground", "#090d14")
+        self.root.option_add("*TCombobox*Listbox.selectForeground", "#090b0f")
         self.root.option_add("*TCombobox*Listbox.font", ("Segoe UI", 10))
 
+    def make_btn(self, parent, text, command, fg=FG_WHITE, bg=BG_CARD_HI, hover=BG_CARD_HOVER, padx=14, pady=7):
+        btn = tk.Button(
+            parent,
+            text=text,
+            command=command,
+            bg=bg,
+            fg=fg,
+            activebackground=ACCENT,
+            activeforeground="#090b0f",
+            relief="flat",
+            bd=0,
+            highlightthickness=1,
+            highlightbackground=BORDER_COLOR,
+            font=("Segoe UI", 9, "bold"),
+            padx=padx,
+            pady=pady,
+            cursor="hand2",
+        )
+        bind_hover(btn, bg, hover, fg, FG_WHITE)
+        return btn
+
     def build_ui(self):
-        # Layout principal: Barra lateral izquierda (230px) + Área principal derecha
         main_wrap = tk.Frame(self.root, bg=BG_ROOT)
         main_wrap.pack(fill="both", expand=True)
 
-        # ================= BARRA LATERAL (SIDEBAR) =================
-        sidebar = tk.Frame(main_wrap, bg=BG_SIDEBAR, width=235, highlightthickness=1, highlightbackground=BORDER_COLOR)
+        # ================= SLIM ICON-ONLY SIDEBAR (66px) =================
+        sidebar = tk.Frame(main_wrap, bg=BG_SIDEBAR, width=66)
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
+        tk.Frame(main_wrap, bg=BORDER_SUBTLE, width=1).pack(side="left", fill="y")
 
-        # Cabecera de marca en la barra lateral
-        brand_box = tk.Frame(sidebar, bg=BG_SIDEBAR, pady=22, padx=18)
-        brand_box.pack(fill="x")
-        if self.logo_small:
-            tk.Label(brand_box, image=self.logo_small, bg=BG_SIDEBAR).pack(side="left", padx=(0, 12))
-        title_col = tk.Frame(brand_box, bg=BG_SIDEBAR)
-        title_col.pack(side="left", fill="x")
-        tk.Label(title_col, text="PES 2017", bg=BG_SIDEBAR, fg=ACCENT, font=("Segoe UI", 15, "bold")).pack(anchor="w")
-        tk.Label(title_col, text="PC EDITION", bg=BG_SIDEBAR, fg=FG_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w")
-
-        tk.Frame(sidebar, bg=BORDER_COLOR, height=1).pack(fill="x", padx=16, pady=(0, 14))
-
-        # Botones de navegación
         self.nav_buttons = {}
+        self.nav_bars = {}
         self.pages = {}
-        nav_items = [
-            ("home", "⚽   Inicio y Carpetas"),
-            ("gfx",  "🖥   Pantalla y Gráficos"),
-            ("aud",  "🔊   Audio e Idioma"),
+
+        top_nav = [
+            ("home", "⌂", "Inicio (Panel Bento)"),
+            ("gfx",  "🖥", "Pantalla y Gráficos"),
+            ("aud",  "🔊", "Audio e Idioma"),
+            ("dirs", "📁", "Carpetas, Parche y Option Files"),
         ]
-        for key, label in nav_items:
+        tk.Frame(sidebar, bg=BG_SIDEBAR, height=18).pack(fill="x")
+
+        for key, icon, tip in top_nav:
+            row = tk.Frame(sidebar, bg=BG_SIDEBAR, height=54)
+            row.pack(fill="x", pady=4)
+            row.pack_propagate(False)
+
+            bar = tk.Frame(row, bg=BG_SIDEBAR, width=4)
+            bar.pack(side="left", fill="y", pady=8)
+
             btn = tk.Button(
-                sidebar,
-                text=label,
-                anchor="w",
-                 padx=20,
-                pady=12,
+                row,
+                text=icon,
                 bg=BG_SIDEBAR,
                 fg=FG_MUTED,
-                activebackground=BG_CARD,
-                activeforeground=FG_WHITE,
+                activebackground=BG_CARD_HI,
+                activeforeground=ACCENT,
                 relief="flat",
                 bd=0,
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe UI Symbol", 17),
                 cursor="hand2",
                 command=lambda k=key: self.switch_page(k),
             )
-            btn.pack(fill="x", padx=10, pady=3)
+            btn.pack(side="left", fill="both", expand=True, padx=(4, 8), pady=4)
+            ToolTip(btn, tip)
+
+            def _bind(k=key, b=btn):
+                b.bind("<Enter>", lambda _e: b.configure(bg=BG_CARD, fg=FG_WHITE) if self.active_page != k else None, add="+")
+                b.bind("<Leave>", lambda _e: b.configure(bg=BG_SIDEBAR, fg=FG_MUTED) if self.active_page != k else None, add="+")
+            _bind()
+
             self.nav_buttons[key] = btn
+            self.nav_bars[key] = bar
 
-        # Tarjeta de atajos útiles en la parte baja del sidebar
-        info_card = tk.Frame(sidebar, bg=BG_CARD, padx=14, pady=12, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        info_card.pack(side="bottom", fill="x", padx=14, pady=16)
-        tk.Label(info_card, text="ATAJOS EN PARTIDO", bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 6))
-        for shortcut, desc in [("Insert", "Menú en el juego"), ("R3 + L2", "Menú desde mando"), ("F12", "Captura de pantalla")]:
-            row = tk.Frame(info_card, bg=BG_CARD)
-            row.pack(fill="x", pady=2)
-            tk.Label(row, text=shortcut, bg=BG_INPUT, fg=FG_WHITE, font=("Consolas", 8, "bold"), padx=6, pady=1).pack(side="left")
-            tk.Label(row, text=desc, bg=BG_CARD, fg=FG_MUTED, font=("Segoe UI", 8)).pack(side="right")
+        # Botón inferior de Guardar / Ajustes rápidos en el sidebar
+        save_row = tk.Frame(sidebar, bg=BG_SIDEBAR, height=54)
+        save_row.pack(side="bottom", fill="x", pady=12)
+        save_row.pack_propagate(False)
+        btn_save_ico = tk.Button(
+            save_row,
+            text="⚙",
+            bg=BG_SIDEBAR,
+            fg=FG_MUTED,
+            activebackground=BG_CARD_HI,
+            activeforeground=ACCENT,
+            relief="flat",
+            bd=0,
+            font=("Segoe UI Symbol", 17),
+            cursor="hand2",
+            command=lambda: self.switch_page("dirs"),
+        )
+        btn_save_ico.pack(fill="both", expand=True, padx=10, pady=4)
+        ToolTip(btn_save_ico, "Rutas y Opciones del Launcher")
+        bind_hover(btn_save_ico, BG_SIDEBAR, BG_CARD, FG_MUTED, FG_WHITE)
 
-        # ================= ÁREA DERECHA (HERO + PÁGINAS + FOOTER) =================
+        # ================= ÁREA DERECHA (HERO + BENTO CONTENT + MINI STATUS) =================
         right_area = tk.Frame(main_wrap, bg=BG_MAIN)
         right_area.pack(side="left", fill="both", expand=True)
 
-        # --- HERO BANNER CON ARTE DE PES 2017 ---
-        hero = tk.Canvas(right_area, height=132, bg=BG_HERO, highlightthickness=0)
-        hero.pack(fill="x", side="top")
+        content_pad = tk.Frame(right_area, bg=BG_MAIN, padx=24, pady=18)
+        content_pad.pack(fill="both", expand=True)
 
-        def draw_hero(event=None):
-            hero.delete("all")
-            w = event.width if event else 745
-            if self.hero_bg_img:
-                hero.create_image(w // 2, 66, image=self.hero_bg_img)
-            # Superposición oscura elegante para legibilidad perfecta
-            hero.create_rectangle(0, 0, w, 132, fill="#080d1a", stipple="gray75", outline="")
-            hero.create_line(0, 131, w, 131, fill=BORDER_GOLD, width=2)
-
-            x_text = 26
-            if self.icon_img:
-                hero.create_image(68, 66, image=self.icon_img)
-                x_text = 132
-
-            hero.create_text(
-                x_text, 40,
-                anchor="nw",
-                text="PRO EVOLUTION SOCCER 2017",
-                fill=FG_WHITE,
-                font=("Segoe UI", 18, "bold"),
-            )
-            hero.create_text(
-                x_text, 70,
-                anchor="nw",
-                text="KONAMI DIGITAL ENTERTAINMENT  ·  MOTOR GRÁFICO FOX ENGINE (VULKAN)",
-                fill=ACCENT,
-                font=("Segoe UI", 9, "bold"),
-            )
-            hero.create_text(
-                x_text, 92,
-                anchor="nw",
-                text="Soporte de Carpeta Base + Parche Separado (DataPacks en vivo) sin fusionar archivos",
-                fill=FG_MUTED,
-                font=("Segoe UI", 9),
-            )
-
-        hero.bind("<Configure>", draw_hero)
-
-        # Insignia de estado flotante en el Hero
-        self.badge_lbl = tk.Label(
-            hero,
-            text="Detectando...",
-            bg=BG_CARD_HI,
-            fg=ACCENT,
-            font=("Segoe UI", 9, "bold"),
-            padx=14,
-            pady=6,
-            highlightthickness=1,
-            highlightbackground=BORDER_GOLD,
-        )
-        self.badge_lbl.place(relx=0.97, rely=0.25, anchor="ne")
+        # --- HERO BANNER DEPORTIVO (NAVY → CRIMSON + BOTÓN DORADO METÁLICO) ---
+        self.hero_h = 176
+        self.hero = tk.Canvas(content_pad, height=self.hero_h, bg=BG_MAIN, highlightthickness=0)
+        self.hero.pack(fill="x", pady=(0, 18))
+        self.hero.bind("<Configure>", lambda _e: self.draw_hero())
+        self.hero.bind("<Motion>", self._on_hero_motion)
+        self.hero.bind("<Leave>", self._on_hero_leave)
+        self.hero.bind("<Button-1>", self._on_hero_click)
 
         # --- CONTENEDOR DE PÁGINAS ---
-        self.page_container = tk.Frame(right_area, bg=BG_MAIN, padx=24, pady=18)
+        self.page_container = tk.Frame(content_pad, bg=BG_MAIN)
         self.page_container.pack(fill="both", expand=True)
 
-        self.build_page_home()
+        # Construir todas las variables y páginas (primero dirs/gfx/aud para tener vars listas)
+        self.build_page_dirs()
         self.build_page_graphics()
         self.build_page_audio()
+        self.build_page_home()
 
-        # --- FOOTER DE ACCIÓN ---
-        footer = tk.Frame(right_area, bg=BG_SIDEBAR, height=78, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        footer.pack(fill="x", side="bottom")
-        footer.pack_propagate(False)
-
-        left_foot = tk.Frame(footer, bg=BG_SIDEBAR)
-        left_foot.pack(side="left", padx=22, pady=12)
-
-        close_row = tk.Frame(left_foot, bg=BG_SIDEBAR)
-        close_row.pack(anchor="w")
-        self.var_close_on_launch = tk.BooleanVar(value=self.settings["close_on_launch"])
-        ModernToggle(close_row, self.var_close_on_launch, bg=BG_SIDEBAR).pack(side="left", padx=(0, 8))
-        tk.Label(
-            close_row,
-            text="Cerrar launcher automáticamente al abrir el juego",
-            bg=BG_SIDEBAR,
-            fg=FG_TEXT,
-            font=("Segoe UI", 9),
-        ).pack(side="left")
+        # --- MINI BARRA DE ESTADO INFERIOR ---
+        status_strip = tk.Frame(right_area, bg=BG_SIDEBAR, height=36)
+        status_strip.pack(fill="x", side="bottom")
+        status_strip.pack_propagate(False)
+        tk.Frame(right_area, bg=BORDER_SUBTLE, height=1).pack(fill="x", side="bottom")
 
         self.lbl_status_bar = tk.Label(
-            left_foot,
-            text="Listo para jugar.",
+            status_strip,
+            text="●  Listo para jugar.",
             bg=BG_SIDEBAR,
             fg=FG_MUTED,
             font=("Segoe UI", 9),
         )
-        self.lbl_status_bar.pack(anchor="w", pady=(4, 0))
+        self.lbl_status_bar.pack(side="left", padx=24)
 
-        self.btn_play = tk.Button(
-            footer,
-            text="▶   JUGAR PES 2017",
-            command=self.on_play_clicked,
-            bg=ACCENT,
-            fg="#090d14",
-            activebackground=ACCENT_HOVER,
-            activeforeground="#090d14",
-            relief="flat",
-            bd=0,
-            font=("Segoe UI", 12, "bold"),
-            padx=28,
-            pady=12,
-            cursor="hand2",
-        )
-        self.btn_play.pack(side="right", padx=(10, 22), pady=14)
-
-        btn_save = tk.Button(
-            footer,
-            text="Guardar Ajustes",
+        btn_quick_save = tk.Button(
+            status_strip,
+            text="💾 Guardar Ajustes",
             command=self.on_save_clicked,
-            bg=BG_CARD,
-            fg=FG_WHITE,
+            bg=BG_SIDEBAR,
+            fg=ACCENT,
             activebackground=BG_CARD_HI,
-            activeforeground=FG_WHITE,
+            activeforeground=ACCENT_HOVER,
             relief="flat",
             bd=0,
-            highlightthickness=1,
-            highlightbackground=BORDER_COLOR,
-            font=("Segoe UI", 10, "bold"),
-            padx=18,
-            pady=12,
+            font=("Segoe UI", 8, "bold"),
+            padx=12,
+            pady=4,
             cursor="hand2",
         )
-        btn_save.pack(side="right", padx=4, pady=14)
+        btn_quick_save.pack(side="right", padx=18)
+        bind_hover(btn_quick_save, BG_SIDEBAR, BG_CARD, ACCENT, ACCENT_HOVER)
 
         self.switch_page("home")
+        self.refresh_graphics_summary()
 
-    def create_card(self, parent, title: str, subtitle: str = "") -> tk.Frame:
-        card = tk.Frame(parent, bg=BG_CARD, padx=18, pady=14, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        card.pack(fill="x", pady=(0, 14))
+    # -------------------- HERO BANNER CANVAS --------------------
+    def draw_hero(self):
+        c = self.hero
+        c.delete("all")
+        w = max(c.winfo_width(), 720)
+        h = self.hero_h
+
+        # Fondo base redondeado azul marino profundo
+        draw_rounded_rect(c, 1, 1, w - 1, h - 1, r=16, fill=NAVY_DEEP, outline="")
+
+        # Franjas diagonales deportivas azul → carmesí (estilo Broadcast PES 2017)
+        split = int(w * 0.48)
+        c.create_polygon(split + 50, 2, w - 12, 2, w - 2, 12, w - 2, h - 12, w - 12, h - 2, split - 65, h - 2, fill="#580e24", outline="")
+        c.create_polygon(split + 85, 2, w - 12, 2, w - 2, 12, w - 2, h - 12, w - 12, h - 2, split - 30, h - 2, fill="#881337", outline="")
+        c.create_polygon(split + 150, 2, w - 12, 2, w - 2, 12, w - 2, h - 12, w - 12, h - 2, split + 45, h - 2, fill="#a91237", outline="")
+        c.create_polygon(split + 240, 2, w - 12, 2, w - 2, 12, w - 2, h - 12, w - 12, h - 2, split + 140, h - 2, fill="#7f102c", outline="")
+
+        # Detalles geométricos sutiles de estadio y cancha
+        c.create_line(split + 30, 2, split - 85, h - 2, fill="#1f355c", width=3)
+        c.create_line(split + 58, 2, split - 57, h - 2, fill=CRIMSON_HI, width=4)
+        c.create_line(split + 72, 2, split - 43, h - 2, fill=ACCENT, width=1)
+        # Área táctica sutil a la derecha
+        c.create_rectangle(w - 115, 22, w - 8, h - 22, outline="#c0264c", width=1)
+        c.create_rectangle(w - 58, 52, w - 8, h - 52, outline="#c0264c", width=1)
+        c.create_oval(w - 140, h // 2 - 28, w - 90, h // 2 + 28, outline="#c0264c", width=1)
+        # Rejilla sutil de focos de estadio en la zona azul
+        for row in range(3):
+            for col in range(6):
+                fx = int(w * 0.34) + col * 10 - row * 4
+                fy = 20 + row * 9 + col * 2
+                c.create_oval(fx, fy, fx + 3, fy + 3, fill="#28426e", outline="")
+
+        # Borde exterior redondeado limpio
+        draw_rounded_rect(c, 1, 1, w - 1, h - 1, r=16, fill="", outline="#2c3952", width=1)
+
+        # Pill de estado arriba a la izquierda (● v01.07 LISTO)
+        bx, by = 28, 22
+        pill_w = max(132, len(self.hero_badge_text) * 8 + 38)
+        draw_rounded_rect(c, bx, by, bx + pill_w, by + 28, r=14, fill="#141e33", outline="#2d3b59", width=1)
+        c.create_oval(bx + 12, by + 9, bx + 22, by + 19, fill=self.hero_badge_color, outline="")
+        c.create_text(bx + 30, by + 14, anchor="w", text=self.hero_badge_text, fill=FG_WHITE, font=("Segoe UI", 9, "bold"))
+
+        # Título metálico PES (blanco) + 2017 (dorado)
+        tx, ty = 28, 58
+        c.create_text(tx, ty, anchor="nw", text="PES", fill=FG_WHITE, font=("Segoe UI Black", 36, "bold"))
+        c.create_text(tx + 114, ty, anchor="nw", text="2017", fill=ACCENT, font=("Segoe UI Black", 36, "bold"))
+
+        # Subtítulo
+        c.create_text(
+            tx + 2, ty + 68,
+            anchor="nw",
+            text="PC EDITION  ·  FOX ENGINE VULKAN",
+            fill="#cbd5e1",
+            font=("Segoe UI", 10, "bold"),
+        )
+
+        # Botón dorado metálico "▶  JUGAR PES 2017" a la derecha
+        bw, bh = 258, 62
+        x1 = w - bw - 34
+        y1 = (h - bh) // 2
+        x2 = x1 + bw
+        y2 = y1 + bh
+        self.hero_btn_box = (x1, y1, x2, y2)
+
+        if not self.play_enabled:
+            draw_rounded_rect(c, x1, y1, x2, y2, r=12, fill="#283040", outline="#3c465c", width=1)
+            c.create_text((x1 + x2) // 2, (y1 + y2) // 2, text=self.play_label, fill="#64748b", font=("Segoe UI", 13, "bold"))
+        else:
+            # Sombra/brillo dorado sutil detrás
+            if self.play_hover:
+                draw_rounded_rect(c, x1 - 3, y1 - 3, x2 + 3, y2 + 3, r=14, fill="", outline=ACCENT_HOVER, width=2)
+            # Cuerpo del botón con efecto metálico de 2 tonos
+            top_col = "#fde047" if self.play_hover else "#f7ce3b"
+            bot_col = "#eab308" if self.play_hover else "#d49b12"
+            draw_rounded_rect(c, x1, y1, x2, y2, r=12, fill=bot_col, outline="#fef08a", width=1)
+            draw_rounded_rect(c, x1 + 2, y1 + 2, x2 - 2, (y1 + y2) // 2 + 4, r=10, fill=top_col, outline="")
+            c.create_text(
+                (x1 + x2) // 2, (y1 + y2) // 2,
+                text=self.play_label,
+                fill="#0b0e14",
+                font=("Segoe UI", 13, "bold"),
+            )
+
+    def _in_hero_btn(self, x, y) -> bool:
+        x1, y1, x2, y2 = self.hero_btn_box
+        return x1 <= x <= x2 and y1 <= y <= y2
+
+    def _on_hero_motion(self, event):
+        over = self.play_enabled and self._in_hero_btn(event.x, event.y)
+        self.hero.configure(cursor="hand2" if over else "")
+        if over != self.play_hover:
+            self.play_hover = over
+            self.draw_hero()
+
+    def _on_hero_leave(self, _event=None):
+        if self.play_hover:
+            self.play_hover = False
+            self.draw_hero()
+
+    def _on_hero_click(self, event):
+        if self.play_enabled and self._in_hero_btn(event.x, event.y):
+            self.on_play_clicked()
+
+    # -------------------- TARJETA BENTO --------------------
+    def create_bento_card(self, parent, icon: str, title: str, subtitle: str = "") -> tk.Frame:
+        card = tk.Frame(
+            parent,
+            bg=BG_CARD,
+            padx=20,
+            pady=16,
+            highlightthickness=1,
+            highlightbackground=BORDER_COLOR,
+        )
         hdr = tk.Frame(card, bg=BG_CARD)
-        hdr.pack(fill="x", pady=(0, 10))
-        tk.Label(hdr, text=title, bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 11, "bold")).pack(side="left")
+        hdr.pack(fill="x", pady=(0, 12))
+        tk.Label(hdr, text=icon, bg=BG_CARD, fg=FG_MUTED, font=("Segoe UI Symbol", 13)).pack(side="left", padx=(0, 8))
+        tk.Label(hdr, text=title, bg=BG_CARD, fg=FG_WHITE, font=("Segoe UI", 12, "bold")).pack(side="left")
         if subtitle:
-            tk.Label(hdr, text=subtitle, bg=BG_CARD, fg=FG_MUTED, font=("Segoe UI", 9)).pack(side="right")
+            tk.Label(hdr, text=subtitle, bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 8)).pack(side="right")
         return card
 
+    # -------------------- PÁGINA 1: BENTO HOME (2x2) --------------------
     def build_page_home(self):
         page = tk.Frame(self.page_container, bg=BG_MAIN)
         self.pages["home"] = page
+        page.columnconfigure(0, weight=1, uniform="bento")
+        page.columnconfigure(1, weight=1, uniform="bento")
+        page.rowconfigure(0, weight=1, uniform="bento_row")
+        page.rowconfigure(1, weight=1, uniform="bento_row")
 
-        # Tarjeta 1: Carpetas del juego y parche
-        c1 = self.create_card(
-            page,
-            "CARPETAS DEL JUEGO Y PARCHE",
-            "Detección independiente sin mezclar ni sobrescribir archivos",
-        )
+        # --- BENTO 1 (Arriba Izquierda): Archivos del Juego ---
+        c1 = self.create_bento_card(page, "📁", "Archivos del Juego")
+        c1.grid(row=0, column=0, sticky="nsew", padx=(0, 9), pady=(0, 9))
 
-        # Fila Juego Base
-        tk.Label(c1, text="Carpeta del Juego Base (CUSA04957):", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
-        r_base = tk.Frame(c1, bg=BG_CARD)
-        r_base.pack(fill="x", pady=(4, 10))
-        self.var_game_dir = tk.StringVar(value=self.settings["game_dir"])
-        ent_game = tk.Entry(
-            r_base,
-            textvariable=self.var_game_dir,
-            bg=BG_INPUT,
-            fg=FG_WHITE,
-            insertbackground=FG_WHITE,
-            relief="flat",
-            font=("Consolas", 10),
-            highlightthickness=1,
-            highlightbackground=BORDER_COLOR,
-            highlightcolor=ACCENT,
-        )
-        ent_game.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
-        ent_game.bind("<FocusOut>", lambda _e: self.on_game_dir_changed())
-        tk.Button(
-            r_base,
-            text="Examinar...",
-            command=self.browse_game_dir,
-            bg=BG_CARD_HI,
-            fg=FG_WHITE,
-            activebackground=ACCENT,
-            activeforeground="#090d14",
-            relief="flat",
-            font=("Segoe UI", 9, "bold"),
-            padx=14,
-            pady=5,
-            cursor="hand2",
-        ).pack(side="right")
+        b1_body = tk.Frame(c1, bg=BG_CARD)
+        b1_body.pack(fill="both", expand=True)
 
-        # Fila Carpeta Patch
-        tk.Label(c1, text="Carpeta de Actualización / Patch (CUSA04957-patch):", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
-        r_patch = tk.Frame(c1, bg=BG_CARD)
-        r_patch.pack(fill="x", pady=(4, 6))
-        self.var_patch_dir = tk.StringVar(value=self.settings["patch_dir"])
-        ent_patch = tk.Entry(
-            r_patch,
-            textvariable=self.var_patch_dir,
-            bg=BG_INPUT,
-            fg=FG_WHITE,
-            insertbackground=FG_WHITE,
-            relief="flat",
-            font=("Consolas", 10),
-            highlightthickness=1,
-            highlightbackground=BORDER_COLOR,
-            highlightcolor=ACCENT,
-        )
-        ent_patch.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
-        ent_patch.bind("<FocusOut>", lambda _e: self.refresh_detection())
-        tk.Button(
-            r_patch,
-            text="Examinar...",
-            command=self.browse_patch_dir,
-            bg=BG_CARD_HI,
-            fg=FG_WHITE,
-            activebackground=ACCENT,
-            activeforeground="#090d14",
-            relief="flat",
-            font=("Segoe UI", 9, "bold"),
-            padx=14,
-            pady=5,
-            cursor="hand2",
-        ).pack(side="right")
+        left_f = tk.Frame(b1_body, bg=BG_CARD)
+        left_f.pack(side="left", fill="both", expand=True)
+        self.lbl_home_base = tk.Label(left_f, text="CUSA04957", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 10, "bold"), anchor="w")
+        self.lbl_home_base.pack(anchor="w", pady=(2, 4))
+        self.lbl_home_patch = tk.Label(left_f, text="CUSA04957-patch", bg=BG_CARD, fg=FG_MUTED, font=("Segoe UI", 9), anchor="w")
+        self.lbl_home_patch.pack(anchor="w")
 
-        # Tarjeta 2: Estado de activación del Patch y diagnóstico
-        c2 = self.create_card(
-            page,
-            "ESTADO DE VERSIÓN Y DATAPACKS",
-            "Puedes jugar con el juego base o activar el parche al vuelo",
-        )
+        right_f = tk.Frame(b1_body, bg=BG_CARD)
+        right_f.pack(side="right", padx=(10, 0))
+        ModernToggle(right_f, self.var_use_patch, command=self.refresh_detection, bg=BG_CARD, active_color=GREEN_OK).pack(anchor="e")
+        tk.Label(right_f, text="Parche v01.07", bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 8)).pack(anchor="e", pady=(4, 0))
 
-        toggle_row = tk.Frame(c2, bg=BG_CARD_HI, padx=14, pady=10, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        toggle_row.pack(fill="x", pady=(0, 10))
-        self.var_use_patch = tk.BooleanVar(value=self.settings["use_patch"])
-        ModernToggle(toggle_row, self.var_use_patch, command=self.refresh_detection, bg=BG_CARD_HI).pack(side="left", padx=(0, 12))
-        lbl_t = tk.Frame(toggle_row, bg=BG_CARD_HI)
-        lbl_t.pack(side="left", fill="x")
+        # --- BENTO 2 (Arriba Derecha): Perfil Gráfico ---
+        c2 = self.create_bento_card(page, "🖥", "Perfil Gráfico")
+        c2.grid(row=0, column=1, sticky="nsew", padx=(9, 0), pady=(0, 9))
+
+        self.gfx_pills_frame = tk.Frame(c2, bg=BG_CARD)
+        self.gfx_pills_frame.pack(fill="x", pady=(6, 10))
+        self.gfx_pill_labels = []
+        for _ in range(4):
+            lbl = tk.Label(
+                self.gfx_pills_frame,
+                text="",
+                bg=BG_PILL,
+                fg=FG_WHITE,
+                font=("Segoe UI", 9, "bold"),
+                padx=12,
+                pady=6,
+                highlightthickness=1,
+                highlightbackground=BORDER_COLOR,
+            )
+            lbl.pack(side="left", padx=(0, 8))
+            self.gfx_pill_labels.append(lbl)
+
+        link_gfx = tk.Label(c2, text="Personalizar gráficos →", bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 8, "bold"), cursor="hand2")
+        link_gfx.pack(anchor="w")
+        link_gfx.bind("<Button-1>", lambda _e: self.switch_page("gfx"))
+
+        # --- BENTO 3 (Abajo Izquierda): Option Files (WEPES) ---
+        c3 = self.create_bento_card(page, "📄", "Option Files (WEPES)")
+        c3.grid(row=1, column=0, sticky="nsew", padx=(0, 9), pady=(9, 0))
+
+        b3_row = tk.Frame(c3, bg=BG_CARD)
+        b3_row.pack(fill="x", pady=(8, 0))
+
         tk.Label(
-            lbl_t,
-            text="Cargar Parche y DataPacks (v01.07) en superposición virtual",
-            bg=BG_CARD_HI,
-            fg=FG_WHITE,
-            font=("Segoe UI", 10, "bold"),
-        ).pack(anchor="w")
+            b3_row,
+            text="USB Virtual Listo",
+            bg=GREEN_BG,
+            fg=GREEN_OK,
+            font=("Segoe UI", 9, "bold"),
+            padx=12,
+            pady=6,
+            highlightthickness=1,
+            highlightbackground=GREEN_BORDER,
+        ).pack(side="left", padx=(0, 12))
+
+        self.make_btn(b3_row, "Abrir carpeta WEPES", self.open_wepes_dir, fg=FG_WHITE, padx=16, pady=6).pack(side="left")
+
         tk.Label(
-            lbl_t,
-            text="Mantiene intactas las carpetas CUSA04957 y CUSA04957-patch por separado",
-            bg=BG_CARD_HI,
-            fg=FG_MUTED,
+            c3,
+            text="Coloca tus archivos .ted / .png en WEPES e impórtalos en Editar → Gestión de datos.",
+            bg=BG_CARD,
+            fg=FG_DIM,
             font=("Segoe UI", 8),
-        ).pack(anchor="w")
+        ).pack(anchor="w", pady=(12, 0))
 
-        self.lbl_base_status = tk.Label(c2, text="", bg=BG_CARD, fg=GREEN_OK, font=("Segoe UI", 9, "bold"))
-        self.lbl_base_status.pack(anchor="w", pady=(2, 2))
+        # --- BENTO 4 (Abajo Derecha): Atajos de Mando ---
+        c4 = self.create_bento_card(page, "🎮", "Atajos de Mando")
+        c4.grid(row=1, column=1, sticky="nsew", padx=(9, 0), pady=(9, 0))
 
-        self.lbl_patch_status = tk.Label(c2, text="", bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 9))
-        self.lbl_patch_status.pack(anchor="w", pady=(2, 0))
+        keys_row = tk.Frame(c4, bg=BG_CARD)
+        keys_row.pack(fill="x", pady=(8, 10))
+        for k_text, k_desc in [
+            ("Insert", "Menú"),
+            ("L2+R3", "Mando"),
+            ("Select", "Cámara BAL"),
+            ("F12", "Captura"),
+        ]:
+            chip = tk.Frame(keys_row, bg=BG_PILL, padx=10, pady=6, highlightthickness=1, highlightbackground=BORDER_COLOR)
+            chip.pack(side="left", padx=(0, 8))
+            tk.Label(chip, text=k_text, bg=BG_PILL, fg=FG_WHITE, font=("Consolas", 9, "bold")).pack()
+            tk.Label(chip, text=k_desc, bg=BG_PILL, fg=FG_DIM, font=("Segoe UI", 7)).pack()
 
+    # -------------------- PÁGINA 2: GRÁFICOS --------------------
     def build_page_graphics(self):
         page = tk.Frame(self.page_container, bg=BG_MAIN)
         self.pages["gfx"] = page
 
-        c1 = self.create_card(page, "PANTALLA Y RESOLUCIÓN", "Ajustes del renderizador Vulkan")
+        c1 = self.create_bento_card(page, "🖥", "Pantalla y Resolución", "Vulkan 1.3")
+        c1.pack(fill="x", pady=(0, 14))
+
         g1 = tk.Frame(c1, bg=BG_CARD)
         g1.pack(fill="x")
         g1.columnconfigure(1, weight=1)
         g1.columnconfigure(3, weight=1)
 
-        tk.Label(g1, text="Modo de pantalla:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=8, padx=(0, 12))
+        tk.Label(g1, text="Modo de pantalla:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=7, padx=(0, 12))
         self.cb_display_mode = ttk.Combobox(g1, state="readonly", values=[v for _, v in DISPLAY_MODES])
         self.set_combo_by_key(self.cb_display_mode, DISPLAY_MODES, self.settings["display_mode"])
-        self.cb_display_mode.grid(row=0, column=1, sticky="ew", pady=8, padx=(0, 20))
+        self.cb_display_mode.grid(row=0, column=1, sticky="ew", pady=7, padx=(0, 20))
 
-        tk.Label(g1, text="Resolución interna:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=2, sticky="w", pady=8, padx=(0, 12))
+        tk.Label(g1, text="Resolución interna:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=2, sticky="w", pady=7, padx=(0, 12))
         self.cb_resolution = ttk.Combobox(g1, state="readonly", values=[v for _, v in RESOLUTIONS])
         self.set_combo_by_key(self.cb_resolution, RESOLUTIONS, self.settings["render_resolution"])
-        self.cb_resolution.grid(row=0, column=3, sticky="ew", pady=8)
+        self.cb_resolution.grid(row=0, column=3, sticky="ew", pady=7)
+        self.cb_resolution.bind("<<ComboboxSelected>>", lambda _e: self.refresh_graphics_summary())
 
-        tk.Label(g1, text="Límite de FPS:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=8, padx=(0, 12))
+        tk.Label(g1, text="Límite de FPS:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=7, padx=(0, 12))
         self.cb_fps = ttk.Combobox(g1, state="readonly", values=[v for _, v in FPS_LIMITS])
         self.set_combo_by_key(self.cb_fps, FPS_LIMITS, str(self.settings["fps_limit"]))
-        self.cb_fps.grid(row=1, column=1, sticky="ew", pady=8, padx=(0, 20))
+        self.cb_fps.grid(row=1, column=1, sticky="ew", pady=7, padx=(0, 20))
+        self.cb_fps.bind("<<ComboboxSelected>>", lambda _e: self.refresh_graphics_summary())
 
-        tk.Label(g1, text="Filtro anisotrópico:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=2, sticky="w", pady=8, padx=(0, 12))
+        tk.Label(g1, text="Filtro anisotrópico:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=2, sticky="w", pady=7, padx=(0, 12))
         self.cb_aniso = ttk.Combobox(g1, state="readonly", values=[v for _, v in ANISO_OPTIONS])
         self.set_combo_by_key(self.cb_aniso, ANISO_OPTIONS, str(self.settings["anisotropy"]))
-        self.cb_aniso.grid(row=1, column=3, sticky="ew", pady=8)
+        self.cb_aniso.grid(row=1, column=3, sticky="ew", pady=7)
 
-        c2 = self.create_card(page, "ESCALADO, ANTIALIASING Y SINCRONIZACIÓN", "Suavizado de bordes y estabilidad de imagen")
+        c2 = self.create_bento_card(page, "✨", "Suavizado, Escalado y Sincronización")
+        c2.pack(fill="x")
+
         g2 = tk.Frame(c2, bg=BG_CARD)
         g2.pack(fill="x")
         g2.columnconfigure(1, weight=1)
-
-        tk.Label(g2, text="Tecnología de suavizado / escalado:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=6, padx=(0, 14))
+        tk.Label(g2, text="Antialiasing / Upscaler:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=4, padx=(0, 14))
         self.cb_upscaler = ttk.Combobox(g2, state="readonly", values=[v for _, v in UPSCALERS])
         self.set_combo_by_key(self.cb_upscaler, UPSCALERS, self.settings["upscaler"])
-        self.cb_upscaler.grid(row=0, column=1, sticky="ew", pady=6)
+        self.cb_upscaler.grid(row=0, column=1, sticky="ew", pady=4)
 
-        toggles_frame = tk.Frame(c2, bg=BG_CARD)
-        toggles_frame.pack(fill="x", pady=(12, 2))
+        t_row = tk.Frame(c2, bg=BG_CARD)
+        t_row.pack(fill="x", pady=(12, 0))
 
-        # Toggle VSync
-        vs_box = tk.Frame(toggles_frame, bg=BG_CARD_HI, padx=14, pady=10, highlightthickness=1, highlightbackground=BORDER_COLOR)
+        vs_box = tk.Frame(t_row, bg=BG_CARD_HI, padx=14, pady=10, highlightthickness=1, highlightbackground=BORDER_COLOR)
         vs_box.pack(side="left", fill="x", expand=True, padx=(0, 8))
         self.var_vsync = tk.BooleanVar(value=self.settings["vsync"])
-        ModernToggle(vs_box, self.var_vsync, bg=BG_CARD_HI).pack(side="left", padx=(0, 10))
-        tk.Label(vs_box, text="Sincronización Vertical (VSync)\nEvita cortes de imagen (tearing)", justify="left", bg=BG_CARD_HI, fg=FG_TEXT, font=("Segoe UI", 9)).pack(side="left")
+        ModernToggle(vs_box, self.var_vsync, command=self.refresh_graphics_summary, bg=BG_CARD_HI, active_color=GREEN_OK).pack(side="left", padx=(0, 12))
+        vs_t = tk.Frame(vs_box, bg=BG_CARD_HI)
+        vs_t.pack(side="left")
+        tk.Label(vs_t, text="Sincronización Vertical (VSync)", bg=BG_CARD_HI, fg=FG_WHITE, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(vs_t, text="Evita cortes horizontales de imagen", bg=BG_CARD_HI, fg=FG_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
 
-        # Toggle FPS Overlay
-        fps_box = tk.Frame(toggles_frame, bg=BG_CARD_HI, padx=14, pady=10, highlightthickness=1, highlightbackground=BORDER_COLOR)
+        fps_box = tk.Frame(t_row, bg=BG_CARD_HI, padx=14, pady=10, highlightthickness=1, highlightbackground=BORDER_COLOR)
         fps_box.pack(side="left", fill="x", expand=True, padx=(8, 0))
         self.var_show_fps = tk.BooleanVar(value=self.settings["show_fps"])
-        ModernToggle(fps_box, self.var_show_fps, bg=BG_CARD_HI).pack(side="left", padx=(0, 10))
-        tk.Label(fps_box, text="Mostrar Overlay de Rendimiento\nFPS, Frametime y uso de GPU/VRAM", justify="left", bg=BG_CARD_HI, fg=FG_TEXT, font=("Segoe UI", 9)).pack(side="left")
+        ModernToggle(fps_box, self.var_show_fps, bg=BG_CARD_HI, active_color=ACCENT).pack(side="left", padx=(0, 12))
+        fps_t = tk.Frame(fps_box, bg=BG_CARD_HI)
+        fps_t.pack(side="left")
+        tk.Label(fps_t, text="Overlay de Rendimiento", bg=BG_CARD_HI, fg=FG_WHITE, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(fps_t, text="FPS, Frametime y uso de GPU/VRAM", bg=BG_CARD_HI, fg=FG_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
 
+    # -------------------- PÁGINA 3: AUDIO E IDIOMA --------------------
     def build_page_audio(self):
         page = tk.Frame(self.page_container, bg=BG_MAIN)
         self.pages["aud"] = page
 
-        c1 = self.create_card(page, "AUDIO E IDIOMA DEL JUEGO", "Configuración de sonido y región")
+        c1 = self.create_bento_card(page, "🔊", "Audio e Idioma del Juego", "Mezcla multicanal")
+        c1.pack(fill="x", pady=(0, 14))
+
         g1 = tk.Frame(c1, bg=BG_CARD)
         g1.pack(fill="x")
         g1.columnconfigure(1, weight=1)
         g1.columnconfigure(3, weight=1)
 
-        tk.Label(g1, text="Idioma predeterminado:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=8, padx=(0, 12))
+        tk.Label(g1, text="Idioma del juego:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=8, padx=(0, 12))
         self.cb_lang = ttk.Combobox(g1, state="readonly", values=[v for _, v in LANGUAGES])
         self.set_combo_by_key(self.cb_lang, LANGUAGES, str(self.settings["language"]))
         self.cb_lang.grid(row=0, column=1, sticky="ew", pady=8, padx=(0, 20))
@@ -857,67 +1084,118 @@ class PES2017Launcher:
         self.set_combo_by_key(self.cb_audio, AUDIO_CHANNELS, self.settings["audio_channels"])
         self.cb_audio.grid(row=0, column=3, sticky="ew", pady=8)
 
-        tk.Label(g1, text="Volumen maestro (%):", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=8, padx=(0, 12))
+        tk.Label(g1, text="Volumen maestro:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=10, padx=(0, 12))
+        vol_wrap = tk.Frame(g1, bg=BG_CARD)
+        vol_wrap.grid(row=1, column=1, columnspan=3, sticky="ew", pady=6)
         self.var_volume = tk.IntVar(value=int(self.settings["master_volume"]))
-        sc_vol = tk.Scale(
-            g1,
-            from_=0,
-            to=200,
-            orient="horizontal",
-            variable=self.var_volume,
-            bg=BG_CARD,
-            fg=ACCENT,
-            highlightthickness=0,
-            troughcolor=BG_INPUT,
-            activebackground=ACCENT_HOVER,
-            font=("Segoe UI", 8, "bold"),
-        )
-        sc_vol.grid(row=1, column=1, columnspan=3, sticky="ew", pady=4)
-
-        c2 = self.create_card(page, "DATOS GUARDADOS (SAVEDATA)", "Ubicación de tus partidas, repeticiones y datos de edición")
-        r_user = tk.Frame(c2, bg=BG_CARD)
-        r_user.pack(fill="x", pady=4)
-        self.var_user_dir = tk.StringVar(value=self.settings["user_dir"])
-        ent_user = tk.Entry(
-            r_user,
-            textvariable=self.var_user_dir,
+        self.var_volume_text = tk.StringVar(value=f"{self.var_volume.get()}%")
+        ModernSlider(vol_wrap, self.var_volume, from_=0, to=200, bg=BG_CARD, label_var=self.var_volume_text).pack(side="left", fill="x", expand=True, padx=(0, 12))
+        tk.Label(
+            vol_wrap,
+            textvariable=self.var_volume_text,
             bg=BG_INPUT,
-            fg=FG_WHITE,
-            insertbackground=FG_WHITE,
-            relief="flat",
-            font=("Consolas", 10),
+            fg=ACCENT,
+            font=("Consolas", 10, "bold"),
+            width=5,
+            pady=4,
             highlightthickness=1,
             highlightbackground=BORDER_COLOR,
-            highlightcolor=ACCENT,
-        )
-        ent_user.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
-        tk.Button(
-            r_user,
-            text="Abrir Carpeta",
-            command=self.open_user_dir,
-            bg=BG_CARD_HI,
-            fg=FG_WHITE,
-            activebackground=ACCENT,
-            activeforeground="#090d14",
-            relief="flat",
-            font=("Segoe UI", 9, "bold"),
-            padx=14,
-            pady=5,
-            cursor="hand2",
         ).pack(side="right")
 
+        c2 = self.create_bento_card(page, "⚙", "Comportamiento del Launcher")
+        c2.pack(fill="x")
+        close_row = tk.Frame(c2, bg=BG_CARD)
+        close_row.pack(fill="x", pady=4)
+        self.var_close_on_launch = tk.BooleanVar(value=self.settings["close_on_launch"])
+        ModernToggle(close_row, self.var_close_on_launch, bg=BG_CARD, active_color=ACCENT).pack(side="left", padx=(0, 12))
+        tk.Label(
+            close_row,
+            text="Cerrar launcher automáticamente al iniciar PES 2017",
+            bg=BG_CARD,
+            fg=FG_TEXT,
+            font=("Segoe UI", 10),
+        ).pack(side="left")
+
+    # -------------------- PÁGINA 4: CARPETAS Y RUTAS --------------------
+    def build_page_dirs(self):
+        page = tk.Frame(self.page_container, bg=BG_MAIN)
+        self.pages["dirs"] = page
+
+        c1 = self.create_bento_card(page, "📁", "Rutas del Juego Base y Parche", "Sin fusionar archivos")
+        c1.pack(fill="x", pady=(0, 14))
+
+        tk.Label(c1, text="Carpeta Juego Base (CUSA04957):", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        r1 = tk.Frame(c1, bg=BG_CARD)
+        r1.pack(fill="x", pady=(4, 10))
+        self.var_game_dir = tk.StringVar(value=self.settings["game_dir"])
+        ent_game = tk.Entry(r1, textvariable=self.var_game_dir, bg=BG_INPUT, fg=FG_WHITE, insertbackground=ACCENT, relief="flat", font=("Consolas", 10), highlightthickness=1, highlightbackground=BORDER_COLOR, highlightcolor=ACCENT)
+        ent_game.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
+        ent_game.bind("<FocusOut>", lambda _e: self.on_game_dir_changed())
+        self.make_btn(r1, "Examinar...", self.browse_game_dir).pack(side="right")
+
+        tk.Label(c1, text="Carpeta Parche / DataPacks (CUSA04957-patch):", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        r2 = tk.Frame(c1, bg=BG_CARD)
+        r2.pack(fill="x", pady=(4, 8))
+        self.var_patch_dir = tk.StringVar(value=self.settings["patch_dir"])
+        ent_patch = tk.Entry(r2, textvariable=self.var_patch_dir, bg=BG_INPUT, fg=FG_WHITE, insertbackground=ACCENT, relief="flat", font=("Consolas", 10), highlightthickness=1, highlightbackground=BORDER_COLOR, highlightcolor=ACCENT)
+        ent_patch.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
+        ent_patch.bind("<FocusOut>", lambda _e: self.refresh_detection())
+        self.make_btn(r2, "Examinar...", self.browse_patch_dir).pack(side="right")
+
+        self.var_use_patch = tk.BooleanVar(value=self.settings["use_patch"])
+        self.lbl_base_status = tk.Label(c1, text="", bg=BG_CARD, fg=GREEN_OK, font=("Segoe UI", 9, "bold"), anchor="w")
+        self.lbl_base_status.pack(anchor="w", pady=(2, 1))
+        self.lbl_patch_status = tk.Label(c1, text="", bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 9), anchor="w")
+        self.lbl_patch_status.pack(anchor="w")
+
+        c2 = self.create_bento_card(page, "💾", "Savedata y Option Files (WEPES)")
+        c2.pack(fill="x")
+        r3 = tk.Frame(c2, bg=BG_CARD)
+        r3.pack(fill="x", pady=4)
+        self.var_user_dir = tk.StringVar(value=self.settings["user_dir"])
+        ent_user = tk.Entry(r3, textvariable=self.var_user_dir, bg=BG_INPUT, fg=FG_WHITE, insertbackground=ACCENT, relief="flat", font=("Consolas", 10), highlightthickness=1, highlightbackground=BORDER_COLOR, highlightcolor=ACCENT)
+        ent_user.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
+        self.make_btn(r3, "💾 Savedata", self.open_user_dir).pack(side="right")
+        self.make_btn(r3, "📂 Carpeta WEPES", self.open_wepes_dir, fg=ACCENT).pack(side="right", padx=(0, 8))
+
     def switch_page(self, key: str):
+        self.active_page = key
         for k, p in self.pages.items():
             p.pack_forget()
         self.pages[key].pack(fill="both", expand=True)
         for k, btn in self.nav_buttons.items():
             if k == key:
                 btn.configure(bg=BG_CARD_HI, fg=ACCENT)
+                self.nav_bars[k].configure(bg=ACCENT)
             else:
                 btn.configure(bg=BG_SIDEBAR, fg=FG_MUTED)
+                self.nav_bars[k].configure(bg=BG_SIDEBAR)
+        if key == "home":
+            self.refresh_graphics_summary()
+
+    def refresh_graphics_summary(self):
+        if not hasattr(self, "gfx_pill_labels"):
+            return
+        res_k = self.get_combo_key(self.cb_resolution, RESOLUTIONS, "native")
+        fps_k = self.get_combo_key(self.cb_fps, FPS_LIMITS, "60")
+        vsync = bool(self.var_vsync.get())
+        vals = [
+            RES_SHORT.get(res_k, "1920×1080"),
+            "Sin límite" if fps_k == "0" else f"{fps_k} FPS",
+            "Vulkan",
+            "VSync ON" if vsync else "VSync OFF",
+        ]
+        for lbl, txt in zip(self.gfx_pill_labels, vals):
+            lbl.configure(text=txt)
 
     def open_user_dir(self):
         p = Path(self.var_user_dir.get().strip() or str(OUT_DIR / "user"))
+        p.mkdir(parents=True, exist_ok=True)
+        if sys.platform == "win32":
+            os.startfile(str(p))
+
+    def open_wepes_dir(self):
+        p = ENGINE_DIR / "WEPES"
         p.mkdir(parents=True, exist_ok=True)
         if sys.platform == "win32":
             os.startfile(str(p))
@@ -941,7 +1219,7 @@ class PES2017Launcher:
 
     def browse_game_dir(self):
         chosen = filedialog.askdirectory(
-            title="Selecciona la carpeta del juego base (donde está eboot.bin y sce_module)",
+            title="Selecciona la carpeta del juego base (CUSA04957)",
             initialdir=self.var_game_dir.get() or str(BASE_DIR),
         )
         if chosen:
@@ -975,69 +1253,53 @@ class PES2017Launcher:
         base_ok = bool(game_path and (game_path / "eboot.bin").is_file() and (game_path / "sce_module" / "libc.prx").is_file())
         if base_ok:
             sfo = read_sfo(game_path / "sce_sys" / "param.sfo")
-            title = sfo.get("TITLE", "Pro Evolution Soccer 2017")
             tid = sfo.get("TITLE_ID", "CUSA04957")
             ver = sfo.get("APP_VER", "01.00")
-            self.lbl_base_status.configure(
-                text=f"✔ Juego Base listo: {title} [{tid}] · Versión base v{ver}",
-                fg=GREEN_OK,
-            )
+            self.lbl_base_status.configure(text=f"✔ Juego Base listo: [{tid}] · v{ver}", fg=GREEN_OK)
+            self.lbl_home_base.configure(text=f"✔  {game_path.name}  (v{ver})", fg=FG_WHITE)
         else:
-            self.lbl_base_status.configure(
-                text="✖ Carpeta de juego base no válida (debe contener eboot.bin y sce_module/libc.prx)",
-                fg=ERR_COLOR,
-            )
+            self.lbl_base_status.configure(text="✖ Carpeta base no válida (falta eboot.bin / libc.prx)", fg=ERR_COLOR)
+            self.lbl_home_base.configure(text="✖  Falta carpeta CUSA04957", fg=ERR_COLOR)
 
         patch_ok = bool(patch_path and (patch_path / "eboot.bin").is_file())
         if patch_ok:
             psfo = read_sfo(patch_path / "sce_sys" / "param.sfo")
             pver = psfo.get("APP_VER", "01.07")
             cpks = read_dpfilelist(patch_path / "DpFileList.bin")
-            cpk_info = f" · {len(cpks)} DataPacks ({', '.join(cpks)})" if cpks else ""
+            cpk_info = f" · {len(cpks)} DataPacks" if cpks else ""
             if use_patch:
-                self.lbl_patch_status.configure(
-                    text=f"✔ Parche ACTIVO (sin fusionar): Actualización v{pver}{cpk_info}",
-                    fg=ACCENT,
-                )
+                self.lbl_patch_status.configure(text=f"✔ Parche ACTIVO: v{pver}{cpk_info}", fg=ACCENT)
+                self.lbl_home_patch.configure(text=f"{patch_path.name}  ·  Activo (v{pver}{cpk_info})", fg=GREEN_OK)
             else:
-                self.lbl_patch_status.configure(
-                    text=f"ℹ Parche detectado (v{pver}), desactivado: se ejecutará la versión base v01.00.",
-                    fg=FG_MUTED,
-                )
+                self.lbl_patch_status.configure(text=f"ℹ Parche v{pver} desactivado (modo base)", fg=FG_MUTED)
+                self.lbl_home_patch.configure(text=f"{patch_path.name}  ·  Desactivado", fg=FG_MUTED)
         else:
-            if self.var_patch_dir.get().strip():
-                self.lbl_patch_status.configure(
-                    text="⚠ La carpeta de parche indicada no contiene eboot.bin (se iniciará sin parche).",
-                    fg=WARN_COLOR,
-                )
-            else:
-                self.lbl_patch_status.configure(
-                    text="ℹ Sin carpeta de parche externa seleccionada (modo juego base).",
-                    fg=FG_MUTED,
-                )
+            self.lbl_patch_status.configure(text="ℹ Sin parche externo seleccionado", fg=FG_MUTED)
+            self.lbl_home_patch.configure(text="Sin parche externo", fg=FG_DIM)
 
         if not base_ok:
-            self.badge_lbl.configure(text="✖ FALTA CARPETA BASE", fg=ERR_COLOR)
-            self.btn_play.configure(state="disabled")
+            self.hero_badge_text = "FALTA BASE"
+            self.hero_badge_color = ERR_COLOR
+            self.play_enabled = False
         elif patch_ok and use_patch:
             psfo = read_sfo(patch_path / "sce_sys" / "param.sfo")
             pver = psfo.get("APP_VER", "01.07")
-            self.badge_lbl.configure(text=f"●  LISTO · PATCH v{pver}", fg=ACCENT)
-            self.btn_play.configure(state="normal")
+            self.hero_badge_text = f"v{pver} LISTO"
+            self.hero_badge_color = GREEN_OK
+            self.play_enabled = True
         else:
             sfo = read_sfo(game_path / "sce_sys" / "param.sfo")
             ver = sfo.get("APP_VER", "01.00")
-            self.badge_lbl.configure(text=f"●  LISTO · BASE v{ver}", fg=GREEN_OK)
-            self.btn_play.configure(state="normal")
+            self.hero_badge_text = f"v{ver} LISTO"
+            self.hero_badge_color = GREEN_OK
+            self.play_enabled = True
+        self.draw_hero()
 
     def on_save_clicked(self):
         self.save_settings()
-        self.lbl_status_bar.configure(text="✔ Ajustes guardados en pes2017.ini", fg=GREEN_OK)
+        self.lbl_status_bar.configure(text="✔  Ajustes guardados en pes2017.ini", fg=GREEN_OK)
 
     def ensure_boot_image(self, game_dir: Path, patch_dir: Path | None) -> Path:
-        """
-        Garantiza que exista el boot-linked.bin correspondiente al eboot activo (base o patch).
-        """
         active_eboot = (patch_dir / "eboot.bin") if (patch_dir and (patch_dir / "eboot.bin").is_file()) else (game_dir / "eboot.bin")
         stat = active_eboot.stat()
         stamp_file = OUT_DIR / "active_eboot_stamp.json"
@@ -1089,11 +1351,10 @@ class PES2017Launcher:
         if patch_dir and not (patch_dir / "eboot.bin").is_file():
             patch_dir = None
 
-        self.btn_play.configure(state="disabled", text="Iniciando...")
-        self.lbl_status_bar.configure(
-            text="Preparando módulos de Pro Evolution Soccer 2017...",
-            fg=ACCENT,
-        )
+        self.play_enabled = False
+        self.play_label = "INICIANDO..."
+        self.draw_hero()
+        self.lbl_status_bar.configure(text="●  Preparando módulos de Pro Evolution Soccer 2017...", fg=ACCENT)
         self.root.update_idletasks()
 
         def worker():
@@ -1112,7 +1373,6 @@ class PES2017Launcher:
                 if MSYS2_BIN.is_dir():
                     env["PATH"] = f"{MSYS2_BIN};{MSYS2_USR};{env['PATH']}"
                 env["SPARTAN_CONFIG"] = str(INI_FILE)
-                # Valores por defecto; una variable ya definida en el entorno tiene prioridad (pruebas A/B).
                 env.setdefault("SPARTAN_PARTIAL_HEIGHT_VIEWS", "0")
                 env.setdefault("SPARTAN_DEFERRED_READBACK", "1")
                 env.setdefault("SPARTAN_STALE_READBACK", "0")
@@ -1162,14 +1422,18 @@ class PES2017Launcher:
         threading.Thread(target=worker, daemon=True).start()
 
     def on_launch_success(self):
-        self.btn_play.configure(state="normal", text="▶   JUGAR PES 2017")
-        self.lbl_status_bar.configure(text="✔ ¡Pro Evolution Soccer 2017 en ejecución!", fg=GREEN_OK)
+        self.play_enabled = True
+        self.play_label = "▶   JUGAR PES 2017"
+        self.draw_hero()
+        self.lbl_status_bar.configure(text="✔  ¡Pro Evolution Soccer 2017 en ejecución!", fg=GREEN_OK)
         if self.var_close_on_launch.get():
             self.root.destroy()
 
     def on_launch_error(self, err_msg: str):
-        self.btn_play.configure(state="normal", text="▶   JUGAR PES 2017")
-        self.lbl_status_bar.configure(text=f"✖ Error al iniciar: {err_msg}", fg=ERR_COLOR)
+        self.play_enabled = True
+        self.play_label = "▶   JUGAR PES 2017"
+        self.draw_hero()
+        self.lbl_status_bar.configure(text=f"✖  Error al iniciar: {err_msg}", fg=ERR_COLOR)
         messagebox.showerror("Error al lanzar PES 2017", err_msg)
 
 

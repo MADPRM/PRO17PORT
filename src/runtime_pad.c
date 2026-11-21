@@ -158,7 +158,7 @@ static ButtonMap pad_map={{
     {SDL_GAMEPAD_BUTTON_WEST,BTN_SQUARE}, {SDL_GAMEPAD_BUTTON_NORTH,BTN_TRIANGLE},
     {SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,BTN_L1}, {SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,BTN_R1},
     {SDL_GAMEPAD_BUTTON_LEFT_STICK,BTN_L3}, {SDL_GAMEPAD_BUTTON_RIGHT_STICK,BTN_R3},
-    {SDL_GAMEPAD_BUTTON_START,BTN_OPTIONS}, {SDL_GAMEPAD_BUTTON_BACK,CLICK_RIGHT},
+    {SDL_GAMEPAD_BUTTON_START,BTN_OPTIONS}, {SDL_GAMEPAD_BUTTON_BACK,CLICK_LEFT},
     {SDL_GAMEPAD_BUTTON_TOUCHPAD,BTN_TOUCHPAD},
     {SDL_GAMEPAD_BUTTON_DPAD_UP,BTN_UP}, {SDL_GAMEPAD_BUTTON_DPAD_DOWN,BTN_DOWN},
     {SDL_GAMEPAD_BUTTON_DPAD_LEFT,BTN_LEFT}, {SDL_GAMEPAD_BUTTON_DPAD_RIGHT,BTN_RIGHT},
@@ -692,10 +692,9 @@ static void apply_mouse_aim(PadData *d) {
 /* The pause key (touchpad right without L1, which is photo mode) lets go of the window's mouse
  * lock while the game's pause menu is up, and takes it back (gpu/shim/window.cpp). */
 static void note_pause_key(const PadData *d) {
-    static bool held;
-    const bool pause=(d->buttons & CLICK_RIGHT) && !(d->buttons & BTN_L1);
-    if (pause && !held) spartanportgpu_mouse_pause_key();
-    held=pause;
+    (void)d;
+    /* PES 2017 uses Select/Touchpad in-game (e.g. Become a Legend camera toggle) and
+     * does not use mouse aiming; never toggle the Windows mouse cursor on Select/Touchpad. */
 }
 
 /* One source for two buttons pressed in the same read (SPARTAN_KEY_MAP "rage=<key>", "grab=<key>"):

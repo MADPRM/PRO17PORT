@@ -176,10 +176,37 @@ static ABI int32_t http_wait(void *handle,void *events,int32_t max,int64_t timeo
     return 0; /* no events: nothing is in flight */
 }
 
-/* ---- NP (PSN): signed out ---- */
+/* ---- NP (PSN): local offline profile (unrestricted UGC for PES 2017 Option Files) ---- */
+static int32_t np_ok_req_id;
 static ABI int32_t np_state(int32_t user,int32_t *state) {
     if (!state) return NP_INVALID_ARGUMENT;
-    (void)user; *state=1; /* SIGNED_OUT */
+    (void)user; *state=2; /* SCE_NP_STATE_SIGNED_IN */
+    return 0;
+}
+static ABI int32_t np_online_id(int32_t user,void *online_id) {
+    (void)user;
+    if (!online_id) return NP_INVALID_ARGUMENT;
+    memset(online_id,0,20);
+    memcpy(online_id,"PRO17Player",11);
+    return 0;
+}
+static ABI int32_t np_np_id(int32_t user,void *np_id) {
+    (void)user;
+    if (!np_id) return NP_INVALID_ARGUMENT;
+    memset(np_id,0,36);
+    memcpy(np_id,"PRO17Player",11);
+    return 0;
+}
+static ABI int32_t np_check_availability(int32_t req_id,const void *online_id,void *reserved) {
+    (void)online_id; (void)reserved;
+    np_ok_req_id=req_id;
+    return 0;
+}
+static ABI int32_t np_parental_control(int32_t req_id,const void *online_id,int8_t *age,void *info) {
+    (void)online_id;
+    if (age) *age=25;
+    if (info) memset(info,0,4); /* contentRestriction=0, chatRestriction=0, ugcRestriction=0 */
+    np_ok_req_id=req_id;
     return 0;
 }
 static ABI int32_t np_signed_out(void) { return NP_SIGNED_OUT; }
@@ -187,7 +214,10 @@ static ABI int32_t np_register(void *cb,void *arg) { (void)cb; (void)arg; return
 static ABI void np_register_void(void *cb,void *arg) { (void)cb; (void)arg; }
 static ABI int32_t np_request(const void *param) { (void)param; return new_id(); }
 static ABI int32_t np_request_ctx(int32_t ctx,const void *param) { (void)ctx; (void)param; return new_id(); }
-static ABI int32_t np_poll(int32_t request,int32_t *result) { (void)request; if (result) *result=NP_SIGNED_OUT; return 0; }
+static ABI int32_t np_poll(int32_t request,int32_t *result) {
+    if (result) *result=(request && request==np_ok_req_id) ? 0 : NP_SIGNED_OUT;
+    return 0;
+}
 static ABI int32_t np_compare(const void *a,const void *b) {
     if (!a || !b) return NP_INVALID_ARGUMENT;
     return memcmp(a,b,16) ? (int32_t)0x80550609 : 0; /* NP_UTIL NOT_MATCH */
@@ -995,14 +1025,14 @@ static const RuntimeExport exports[]={
     {"sceHttpSetEpoll",ok_void}, {"sceHttpUnsetEpoll",ok_void}, {"sceHttpWaitRequest",http_wait},
     {"sceHttpGetStatusCode",http_fail}, {"sceHttpGetResponseContentLength",http_fail},
     {"sceHttpReadData",http_fail},
-    {"sceNpGetState",np_state}, {"sceNpGetOnlineId",np_signed_out}, {"sceNpGetNpId",np_signed_out},
+    {"sceNpGetState",np_state}, {"sceNpGetOnlineId",np_online_id}, {"sceNpGetNpId",np_np_id},
     {"sceNpRegisterStateCallback",np_register}, {"sceNpUnregisterStateCallback",ok_void},
     {"sceNpRegisterGamePresenceCallback",np_register_void}, {"sceNpRegisterPlusEventCallback",np_register},
     {"sceNpUnregisterPlusEventCallback",ok_void}, {"sceNpCheckCallback",ok_void},
     {"sceNpSetNpTitleId",ok_void}, {"sceNpNotifyPlusFeature",ok_void}, {"sceNpSetContentRestriction",ok_void},
     {"sceNpCreateAsyncRequest",np_request}, {"sceNpDeleteRequest",ok_void}, {"sceNpAbortRequest",ok_void},
-    {"sceNpPollAsync",np_poll}, {"sceNpCheckNpAvailability",np_signed_out},
-    {"sceNpGetParentalControlInfo",np_signed_out}, {"sceNpCheckPlus",np_signed_out},
+    {"sceNpPollAsync",np_poll}, {"sceNpCheckNpAvailability",np_check_availability},
+    {"sceNpGetParentalControlInfo",np_parental_control}, {"sceNpCheckPlus",np_signed_out},
     {"sceNpGetGamePresenceStatus",np_signed_out},
     {"sceNpCmpNpId",np_compare}, {"sceNpCmpOnlineId",np_compare},
     {"sceNpAuthCreateAsyncRequest",np_request}, {"sceNpAuthDeleteRequest",ok_void},
