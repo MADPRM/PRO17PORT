@@ -17,6 +17,8 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+from pes2017_lang import UI_LANGUAGES, normalize_language, translate
+
 # Activar DPI awareness en Windows para textos y bordes ultra nítidos
 if sys.platform == "win32":
     try:
@@ -472,20 +474,25 @@ class PES2017Launcher:
         self.root.configure(bg=BG_ROOT)
 
         self.icon_img = None
+        self.settings = self.load_settings()
+        self.ui_language = self.settings["ui_language"]
+        self.launch_in_progress = False
         self.active_page = "home"
         self.play_enabled = True
         self.play_hover = False
-        self.play_label = "▶   JUGAR PES 2017"
-        self.hero_badge_text = "DETECTANDO..."
+        self.play_label = self.tr("▶   JUGAR PES 2017")
+        self.hero_badge_text = self.tr("DETECTANDO...")
         self.hero_badge_color = ACCENT
         self.hero_btn_box = (0, 0, 0, 0)
 
-        self.settings = self.load_settings()
         self.load_brand_images()
         self.setup_styles()
         self.build_ui()
         enable_dark_titlebar(self.root)
         self.refresh_detection()
+
+    def tr(self, text):
+        return translate(text, self.ui_language)
 
     def load_brand_images(self):
         game_dir = Path(self.settings.get("game_dir", "")) if self.settings.get("game_dir") else BASE_DIR / "CUSA04957"
@@ -504,6 +511,7 @@ class PES2017Launcher:
         auto_base, auto_patch = auto_detect_folders()
         ini = read_ini(INI_FILE)
         defaults = {
+            "ui_language": "es",
             "game_dir": auto_base,
             "patch_dir": auto_patch,
             "use_patch": bool(auto_patch),
@@ -523,7 +531,8 @@ class PES2017Launcher:
         if SETTINGS_FILE.is_file():
             try:
                 saved = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
-                defaults.update(saved)
+                if isinstance(saved, dict):
+                    defaults.update(saved)
             except Exception:
                 pass
         if "\\PRO17PORT\\out\\user" in defaults.get("user_dir", "") and not (ENGINE_DIR / "PRO17PORT").is_dir():
@@ -534,10 +543,12 @@ class PES2017Launcher:
             sib = find_sibling_patch(defaults["game_dir"])
             if sib:
                 defaults["patch_dir"] = sib
+        defaults["ui_language"] = normalize_language(defaults["ui_language"])
         return defaults
 
     def save_settings(self):
         data = {
+            "ui_language": self.get_combo_key(self.cb_ui_lang, UI_LANGUAGES, "es"),
             "game_dir": self.var_game_dir.get().strip(),
             "patch_dir": self.var_patch_dir.get().strip(),
             "use_patch": bool(self.var_use_patch.get()),
@@ -555,6 +566,7 @@ class PES2017Launcher:
             "close_on_launch": bool(self.var_close_on_launch.get()),
         }
         SETTINGS_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        self.settings = data
 
         res_key = data["render_resolution"]
         out_res_map = {
@@ -638,6 +650,7 @@ class PES2017Launcher:
 
     def build_ui(self):
         main_wrap = tk.Frame(self.root, bg=BG_ROOT)
+        self.main_wrap = main_wrap
         main_wrap.pack(fill="both", expand=True)
 
         # ================= SLIM ICON-ONLY SIDEBAR (66px) =================
@@ -651,10 +664,10 @@ class PES2017Launcher:
         self.pages = {}
 
         top_nav = [
-            ("home", "⌂", "Inicio (Panel Bento)"),
-            ("gfx",  "🖥", "Pantalla y Gráficos"),
-            ("aud",  "🔊", "Audio e Idioma"),
-            ("dirs", "📁", "Carpetas, Parche y Option Files"),
+            ("home", "⌂", self.tr("Inicio (Panel Bento)")),
+            ("gfx",  "🖥", self.tr("Pantalla y Gráficos")),
+            ("aud",  "🔊", self.tr("Audio e Idioma")),
+            ("dirs", "📁", self.tr("Carpetas, Parche y Option Files")),
         ]
         tk.Frame(sidebar, bg=BG_SIDEBAR, height=18).pack(fill="x")
 
@@ -708,7 +721,7 @@ class PES2017Launcher:
             command=lambda: self.switch_page("dirs"),
         )
         btn_save_ico.pack(fill="both", expand=True, padx=10, pady=4)
-        ToolTip(btn_save_ico, "Rutas y Opciones del Launcher")
+        ToolTip(btn_save_ico, self.tr("Rutas y Opciones del Launcher"))
         bind_hover(btn_save_ico, BG_SIDEBAR, BG_CARD, FG_MUTED, FG_WHITE)
 
         # ================= ÁREA DERECHA (HERO + BENTO CONTENT + MINI STATUS) =================
@@ -745,7 +758,7 @@ class PES2017Launcher:
 
         self.lbl_status_bar = tk.Label(
             status_strip,
-            text="●  Listo para jugar.",
+            text=self.tr("●  Listo para jugar."),
             bg=BG_SIDEBAR,
             fg=FG_MUTED,
             font=("Segoe UI", 9),
@@ -754,7 +767,7 @@ class PES2017Launcher:
 
         btn_quick_save = tk.Button(
             status_strip,
-            text="💾 Guardar Ajustes",
+            text=self.tr("💾 Guardar Ajustes"),
             command=self.on_save_clicked,
             bg=BG_SIDEBAR,
             fg=ACCENT,
@@ -904,7 +917,7 @@ class PES2017Launcher:
         page.rowconfigure(1, weight=1, uniform="bento_row")
 
         # --- BENTO 1 (Arriba Izquierda): Archivos del Juego ---
-        c1 = self.create_bento_card(page, "📁", "Archivos del Juego")
+        c1 = self.create_bento_card(page, "📁", self.tr("Archivos del Juego"))
         c1.grid(row=0, column=0, sticky="nsew", padx=(0, 9), pady=(0, 9))
 
         b1_body = tk.Frame(c1, bg=BG_CARD)
@@ -920,10 +933,10 @@ class PES2017Launcher:
         right_f = tk.Frame(b1_body, bg=BG_CARD)
         right_f.pack(side="right", padx=(10, 0))
         ModernToggle(right_f, self.var_use_patch, command=self.refresh_detection, bg=BG_CARD, active_color=GREEN_OK).pack(anchor="e")
-        tk.Label(right_f, text="Parche v01.07", bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 8)).pack(anchor="e", pady=(4, 0))
+        tk.Label(right_f, text=self.tr("Parche v01.07"), bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 8)).pack(anchor="e", pady=(4, 0))
 
         # --- BENTO 2 (Arriba Derecha): Perfil Gráfico ---
-        c2 = self.create_bento_card(page, "🖥", "Perfil Gráfico")
+        c2 = self.create_bento_card(page, "🖥", self.tr("Perfil Gráfico"))
         c2.grid(row=0, column=1, sticky="nsew", padx=(9, 0), pady=(0, 9))
 
         self.gfx_pills_frame = tk.Frame(c2, bg=BG_CARD)
@@ -944,7 +957,7 @@ class PES2017Launcher:
             lbl.pack(side="left", padx=(0, 8))
             self.gfx_pill_labels.append(lbl)
 
-        link_gfx = tk.Label(c2, text="Personalizar gráficos →", bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 8, "bold"), cursor="hand2")
+        link_gfx = tk.Label(c2, text=self.tr("Personalizar gráficos →"), bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 8, "bold"), cursor="hand2")
         link_gfx.pack(anchor="w")
         link_gfx.bind("<Button-1>", lambda _e: self.switch_page("gfx"))
 
@@ -957,7 +970,7 @@ class PES2017Launcher:
 
         tk.Label(
             b3_row,
-            text="USB Virtual Listo",
+            text=self.tr("USB Virtual Listo"),
             bg=GREEN_BG,
             fg=GREEN_OK,
             font=("Segoe UI", 9, "bold"),
@@ -967,27 +980,27 @@ class PES2017Launcher:
             highlightbackground=GREEN_BORDER,
         ).pack(side="left", padx=(0, 12))
 
-        self.make_btn(b3_row, "Abrir carpeta WEPES", self.open_wepes_dir, fg=FG_WHITE, padx=16, pady=6).pack(side="left")
+        self.make_btn(b3_row, self.tr("Abrir carpeta WEPES"), self.open_wepes_dir, fg=FG_WHITE, padx=16, pady=6).pack(side="left")
 
         tk.Label(
             c3,
-            text="Coloca tus archivos .ted / .png en WEPES e impórtalos en Editar → Gestión de datos.",
+            text=self.tr("Coloca tus archivos .ted / .png en WEPES e impórtalos en Editar → Gestión de datos."),
             bg=BG_CARD,
             fg=FG_DIM,
             font=("Segoe UI", 8),
         ).pack(anchor="w", pady=(12, 0))
 
         # --- BENTO 4 (Abajo Derecha): Atajos de Mando ---
-        c4 = self.create_bento_card(page, "🎮", "Atajos de Mando")
+        c4 = self.create_bento_card(page, "🎮", self.tr("Atajos de Mando"))
         c4.grid(row=1, column=1, sticky="nsew", padx=(9, 0), pady=(9, 0))
 
         keys_row = tk.Frame(c4, bg=BG_CARD)
         keys_row.pack(fill="x", pady=(8, 10))
         for k_text, k_desc in [
-            ("Insert", "Menú"),
-            ("L2+R3", "Mando"),
-            ("Select", "Cámara BAL"),
-            ("F12", "Captura"),
+            ("Insert", self.tr("Menú")),
+            ("L2+R3", self.tr("Mando")),
+            ("Select", self.tr("Cámara BAL")),
+            ("F12", self.tr("Captura")),
         ]:
             chip = tk.Frame(keys_row, bg=BG_PILL, padx=10, pady=6, highlightthickness=1, highlightbackground=BORDER_COLOR)
             chip.pack(side="left", padx=(0, 8))
@@ -999,7 +1012,7 @@ class PES2017Launcher:
         page = tk.Frame(self.page_container, bg=BG_MAIN)
         self.pages["gfx"] = page
 
-        c1 = self.create_bento_card(page, "🖥", "Pantalla y Resolución", "Vulkan 1.3")
+        c1 = self.create_bento_card(page, "🖥", self.tr("Pantalla y Resolución"), "Vulkan 1.3")
         c1.pack(fill="x", pady=(0, 14))
 
         g1 = tk.Frame(c1, bg=BG_CARD)
@@ -1007,36 +1020,36 @@ class PES2017Launcher:
         g1.columnconfigure(1, weight=1)
         g1.columnconfigure(3, weight=1)
 
-        tk.Label(g1, text="Modo de pantalla:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=7, padx=(0, 12))
-        self.cb_display_mode = ttk.Combobox(g1, state="readonly", values=[v for _, v in DISPLAY_MODES])
+        tk.Label(g1, text=self.tr("Modo de pantalla:"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=7, padx=(0, 12))
+        self.cb_display_mode = ttk.Combobox(g1, state="readonly", values=[self.tr(v) for _, v in DISPLAY_MODES])
         self.set_combo_by_key(self.cb_display_mode, DISPLAY_MODES, self.settings["display_mode"])
         self.cb_display_mode.grid(row=0, column=1, sticky="ew", pady=7, padx=(0, 20))
 
-        tk.Label(g1, text="Resolución interna:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=2, sticky="w", pady=7, padx=(0, 12))
-        self.cb_resolution = ttk.Combobox(g1, state="readonly", values=[v for _, v in RESOLUTIONS])
+        tk.Label(g1, text=self.tr("Resolución interna:"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=2, sticky="w", pady=7, padx=(0, 12))
+        self.cb_resolution = ttk.Combobox(g1, state="readonly", values=[self.tr(v) for _, v in RESOLUTIONS])
         self.set_combo_by_key(self.cb_resolution, RESOLUTIONS, self.settings["render_resolution"])
         self.cb_resolution.grid(row=0, column=3, sticky="ew", pady=7)
         self.cb_resolution.bind("<<ComboboxSelected>>", lambda _e: self.refresh_graphics_summary())
 
-        tk.Label(g1, text="Límite de FPS:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=7, padx=(0, 12))
-        self.cb_fps = ttk.Combobox(g1, state="readonly", values=[v for _, v in FPS_LIMITS])
+        tk.Label(g1, text=self.tr("Límite de FPS:"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=7, padx=(0, 12))
+        self.cb_fps = ttk.Combobox(g1, state="readonly", values=[self.tr(v) for _, v in FPS_LIMITS])
         self.set_combo_by_key(self.cb_fps, FPS_LIMITS, str(self.settings["fps_limit"]))
         self.cb_fps.grid(row=1, column=1, sticky="ew", pady=7, padx=(0, 20))
         self.cb_fps.bind("<<ComboboxSelected>>", lambda _e: self.refresh_graphics_summary())
 
-        tk.Label(g1, text="Filtro anisotrópico:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=2, sticky="w", pady=7, padx=(0, 12))
-        self.cb_aniso = ttk.Combobox(g1, state="readonly", values=[v for _, v in ANISO_OPTIONS])
+        tk.Label(g1, text=self.tr("Filtro anisotrópico:"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=2, sticky="w", pady=7, padx=(0, 12))
+        self.cb_aniso = ttk.Combobox(g1, state="readonly", values=[self.tr(v) for _, v in ANISO_OPTIONS])
         self.set_combo_by_key(self.cb_aniso, ANISO_OPTIONS, str(self.settings["anisotropy"]))
         self.cb_aniso.grid(row=1, column=3, sticky="ew", pady=7)
 
-        c2 = self.create_bento_card(page, "✨", "Suavizado, Escalado y Sincronización")
+        c2 = self.create_bento_card(page, "✨", self.tr("Suavizado, Escalado y Sincronización"))
         c2.pack(fill="x")
 
         g2 = tk.Frame(c2, bg=BG_CARD)
         g2.pack(fill="x")
         g2.columnconfigure(1, weight=1)
         tk.Label(g2, text="Antialiasing / Upscaler:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=4, padx=(0, 14))
-        self.cb_upscaler = ttk.Combobox(g2, state="readonly", values=[v for _, v in UPSCALERS])
+        self.cb_upscaler = ttk.Combobox(g2, state="readonly", values=[self.tr(v) for _, v in UPSCALERS])
         self.set_combo_by_key(self.cb_upscaler, UPSCALERS, self.settings["upscaler"])
         self.cb_upscaler.grid(row=0, column=1, sticky="ew", pady=4)
 
@@ -1049,8 +1062,8 @@ class PES2017Launcher:
         ModernToggle(vs_box, self.var_vsync, command=self.refresh_graphics_summary, bg=BG_CARD_HI, active_color=GREEN_OK).pack(side="left", padx=(0, 12))
         vs_t = tk.Frame(vs_box, bg=BG_CARD_HI)
         vs_t.pack(side="left")
-        tk.Label(vs_t, text="Sincronización Vertical (VSync)", bg=BG_CARD_HI, fg=FG_WHITE, font=("Segoe UI", 9, "bold")).pack(anchor="w")
-        tk.Label(vs_t, text="Evita cortes horizontales de imagen", bg=BG_CARD_HI, fg=FG_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
+        tk.Label(vs_t, text=self.tr("Sincronización Vertical (VSync)"), bg=BG_CARD_HI, fg=FG_WHITE, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(vs_t, text=self.tr("Evita cortes horizontales de imagen"), bg=BG_CARD_HI, fg=FG_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
 
         fps_box = tk.Frame(t_row, bg=BG_CARD_HI, padx=14, pady=10, highlightthickness=1, highlightbackground=BORDER_COLOR)
         fps_box.pack(side="left", fill="x", expand=True, padx=(8, 0))
@@ -1058,15 +1071,15 @@ class PES2017Launcher:
         ModernToggle(fps_box, self.var_show_fps, bg=BG_CARD_HI, active_color=ACCENT).pack(side="left", padx=(0, 12))
         fps_t = tk.Frame(fps_box, bg=BG_CARD_HI)
         fps_t.pack(side="left")
-        tk.Label(fps_t, text="Overlay de Rendimiento", bg=BG_CARD_HI, fg=FG_WHITE, font=("Segoe UI", 9, "bold")).pack(anchor="w")
-        tk.Label(fps_t, text="FPS, Frametime y uso de GPU/VRAM", bg=BG_CARD_HI, fg=FG_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
+        tk.Label(fps_t, text=self.tr("Overlay de Rendimiento"), bg=BG_CARD_HI, fg=FG_WHITE, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(fps_t, text=self.tr("FPS, Frametime y uso de GPU/VRAM"), bg=BG_CARD_HI, fg=FG_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
 
     # -------------------- PÁGINA 3: AUDIO E IDIOMA --------------------
     def build_page_audio(self):
         page = tk.Frame(self.page_container, bg=BG_MAIN)
         self.pages["aud"] = page
 
-        c1 = self.create_bento_card(page, "🔊", "Audio e Idioma del Juego", "Mezcla multicanal")
+        c1 = self.create_bento_card(page, "🔊", self.tr("Audio e Idioma del Juego"), self.tr("Mezcla multicanal"))
         c1.pack(fill="x", pady=(0, 14))
 
         g1 = tk.Frame(c1, bg=BG_CARD)
@@ -1074,17 +1087,17 @@ class PES2017Launcher:
         g1.columnconfigure(1, weight=1)
         g1.columnconfigure(3, weight=1)
 
-        tk.Label(g1, text="Idioma del juego:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=8, padx=(0, 12))
-        self.cb_lang = ttk.Combobox(g1, state="readonly", values=[v for _, v in LANGUAGES])
+        tk.Label(g1, text=self.tr("Idioma del juego:"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w", pady=8, padx=(0, 12))
+        self.cb_lang = ttk.Combobox(g1, state="readonly", values=[self.tr(v) for _, v in LANGUAGES])
         self.set_combo_by_key(self.cb_lang, LANGUAGES, str(self.settings["language"]))
         self.cb_lang.grid(row=0, column=1, sticky="ew", pady=8, padx=(0, 20))
 
-        tk.Label(g1, text="Canales de salida:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=2, sticky="w", pady=8, padx=(0, 12))
-        self.cb_audio = ttk.Combobox(g1, state="readonly", values=[v for _, v in AUDIO_CHANNELS])
+        tk.Label(g1, text=self.tr("Canales de salida:"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=0, column=2, sticky="w", pady=8, padx=(0, 12))
+        self.cb_audio = ttk.Combobox(g1, state="readonly", values=[self.tr(v) for _, v in AUDIO_CHANNELS])
         self.set_combo_by_key(self.cb_audio, AUDIO_CHANNELS, self.settings["audio_channels"])
         self.cb_audio.grid(row=0, column=3, sticky="ew", pady=8)
 
-        tk.Label(g1, text="Volumen maestro:", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=10, padx=(0, 12))
+        tk.Label(g1, text=self.tr("Volumen maestro:"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky="w", pady=10, padx=(0, 12))
         vol_wrap = tk.Frame(g1, bg=BG_CARD)
         vol_wrap.grid(row=1, column=1, columnspan=3, sticky="ew", pady=6)
         self.var_volume = tk.IntVar(value=int(self.settings["master_volume"]))
@@ -1102,15 +1115,24 @@ class PES2017Launcher:
             highlightbackground=BORDER_COLOR,
         ).pack(side="right")
 
-        c2 = self.create_bento_card(page, "⚙", "Comportamiento del Launcher")
+        c2 = self.create_bento_card(page, "⚙", self.tr("Comportamiento del Launcher"))
         c2.pack(fill="x")
+        language_row = tk.Frame(c2, bg=BG_CARD)
+        language_row.pack(fill="x", pady=(0, 8))
+        tk.Label(language_row, text=self.tr("Idioma del launcher:"), bg=BG_CARD,
+                 fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 12))
+        self.cb_ui_lang = ttk.Combobox(language_row, state="readonly", width=18,
+                                      values=[label for _, label in UI_LANGUAGES])
+        self.set_combo_by_key(self.cb_ui_lang, UI_LANGUAGES, self.ui_language)
+        self.cb_ui_lang.pack(side="left")
+        self.cb_ui_lang.bind("<<ComboboxSelected>>", self.on_ui_language_changed)
         close_row = tk.Frame(c2, bg=BG_CARD)
         close_row.pack(fill="x", pady=4)
         self.var_close_on_launch = tk.BooleanVar(value=self.settings["close_on_launch"])
         ModernToggle(close_row, self.var_close_on_launch, bg=BG_CARD, active_color=ACCENT).pack(side="left", padx=(0, 12))
         tk.Label(
             close_row,
-            text="Cerrar launcher automáticamente al iniciar PES 2017",
+            text=self.tr("Cerrar launcher automáticamente al iniciar PES 2017"),
             bg=BG_CARD,
             fg=FG_TEXT,
             font=("Segoe UI", 10),
@@ -1121,26 +1143,26 @@ class PES2017Launcher:
         page = tk.Frame(self.page_container, bg=BG_MAIN)
         self.pages["dirs"] = page
 
-        c1 = self.create_bento_card(page, "📁", "Rutas del Juego Base y Parche", "Sin fusionar archivos")
+        c1 = self.create_bento_card(page, "📁", self.tr("Rutas del Juego Base y Parche"), self.tr("Sin fusionar archivos"))
         c1.pack(fill="x", pady=(0, 14))
 
-        tk.Label(c1, text="Carpeta Juego Base (CUSA04957):", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(c1, text=self.tr("Carpeta Juego Base (CUSA04957):"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
         r1 = tk.Frame(c1, bg=BG_CARD)
         r1.pack(fill="x", pady=(4, 10))
         self.var_game_dir = tk.StringVar(value=self.settings["game_dir"])
         ent_game = tk.Entry(r1, textvariable=self.var_game_dir, bg=BG_INPUT, fg=FG_WHITE, insertbackground=ACCENT, relief="flat", font=("Consolas", 10), highlightthickness=1, highlightbackground=BORDER_COLOR, highlightcolor=ACCENT)
         ent_game.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
         ent_game.bind("<FocusOut>", lambda _e: self.on_game_dir_changed())
-        self.make_btn(r1, "Examinar...", self.browse_game_dir).pack(side="right")
+        self.make_btn(r1, self.tr("Examinar..."), self.browse_game_dir).pack(side="right")
 
-        tk.Label(c1, text="Carpeta Parche / DataPacks (CUSA04957-patch):", bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(c1, text=self.tr("Carpeta Parche / DataPacks (CUSA04957-patch):"), bg=BG_CARD, fg=FG_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
         r2 = tk.Frame(c1, bg=BG_CARD)
         r2.pack(fill="x", pady=(4, 8))
         self.var_patch_dir = tk.StringVar(value=self.settings["patch_dir"])
         ent_patch = tk.Entry(r2, textvariable=self.var_patch_dir, bg=BG_INPUT, fg=FG_WHITE, insertbackground=ACCENT, relief="flat", font=("Consolas", 10), highlightthickness=1, highlightbackground=BORDER_COLOR, highlightcolor=ACCENT)
         ent_patch.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
         ent_patch.bind("<FocusOut>", lambda _e: self.refresh_detection())
-        self.make_btn(r2, "Examinar...", self.browse_patch_dir).pack(side="right")
+        self.make_btn(r2, self.tr("Examinar..."), self.browse_patch_dir).pack(side="right")
 
         self.var_use_patch = tk.BooleanVar(value=self.settings["use_patch"])
         self.lbl_base_status = tk.Label(c1, text="", bg=BG_CARD, fg=GREEN_OK, font=("Segoe UI", 9, "bold"), anchor="w")
@@ -1148,15 +1170,15 @@ class PES2017Launcher:
         self.lbl_patch_status = tk.Label(c1, text="", bg=BG_CARD, fg=ACCENT, font=("Segoe UI", 9), anchor="w")
         self.lbl_patch_status.pack(anchor="w")
 
-        c2 = self.create_bento_card(page, "💾", "Savedata y Option Files (WEPES)")
+        c2 = self.create_bento_card(page, "💾", self.tr("Savedata y Option Files (WEPES)"))
         c2.pack(fill="x")
         r3 = tk.Frame(c2, bg=BG_CARD)
         r3.pack(fill="x", pady=4)
         self.var_user_dir = tk.StringVar(value=self.settings["user_dir"])
         ent_user = tk.Entry(r3, textvariable=self.var_user_dir, bg=BG_INPUT, fg=FG_WHITE, insertbackground=ACCENT, relief="flat", font=("Consolas", 10), highlightthickness=1, highlightbackground=BORDER_COLOR, highlightcolor=ACCENT)
         ent_user.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 10))
-        self.make_btn(r3, "💾 Savedata", self.open_user_dir).pack(side="right")
-        self.make_btn(r3, "📂 Carpeta WEPES", self.open_wepes_dir, fg=ACCENT).pack(side="right", padx=(0, 8))
+        self.make_btn(r3, self.tr("💾 Savedata"), self.open_user_dir).pack(side="right")
+        self.make_btn(r3, self.tr("📂 Carpeta WEPES"), self.open_wepes_dir, fg=ACCENT).pack(side="right", padx=(0, 8))
 
     def switch_page(self, key: str):
         self.active_page = key
@@ -1181,7 +1203,7 @@ class PES2017Launcher:
         vsync = bool(self.var_vsync.get())
         vals = [
             RES_SHORT.get(res_k, "1920×1080"),
-            "Sin límite" if fps_k == "0" else f"{fps_k} FPS",
+            self.tr("Sin límite") if fps_k == "0" else f"{fps_k} FPS",
             "Vulkan",
             "VSync ON" if vsync else "VSync OFF",
         ]
@@ -1202,24 +1224,36 @@ class PES2017Launcher:
 
     @staticmethod
     def set_combo_by_key(combo: ttk.Combobox, pairs: list, key: str):
-        for k, label in pairs:
+        for index, (k, _label) in enumerate(pairs):
             if k == key:
-                combo.set(label)
+                combo.current(index)
                 return
         if pairs:
-            combo.set(pairs[0][1])
+            combo.current(0)
 
     @staticmethod
     def get_combo_key(combo: ttk.Combobox, pairs: list, default: str) -> str:
-        val = combo.get()
-        for k, label in pairs:
-            if label == val:
-                return k
-        return default
+        index = combo.current()
+        return pairs[index][0] if 0 <= index < len(pairs) else default
+
+    def on_ui_language_changed(self, _event=None):
+        language = self.get_combo_key(self.cb_ui_lang, UI_LANGUAGES, "es")
+        if self.launch_in_progress or language == self.ui_language:
+            self.set_combo_by_key(self.cb_ui_lang, UI_LANGUAGES, self.ui_language)
+            return
+        # Save every current control before rebuilding so pending edits survive.
+        self.save_settings()
+        self.ui_language = language
+        page = self.active_page
+        self.main_wrap.destroy()
+        self.play_label = self.tr("▶   JUGAR PES 2017")
+        self.build_ui()
+        self.switch_page(page)
+        self.refresh_detection()
 
     def browse_game_dir(self):
         chosen = filedialog.askdirectory(
-            title="Selecciona la carpeta del juego base (CUSA04957)",
+            title=self.tr("Selecciona la carpeta del juego base (CUSA04957)"),
             initialdir=self.var_game_dir.get() or str(BASE_DIR),
         )
         if chosen:
@@ -1228,7 +1262,7 @@ class PES2017Launcher:
 
     def browse_patch_dir(self):
         chosen = filedialog.askdirectory(
-            title="Selecciona la carpeta del Parche / Update (CUSA04957-patch)",
+            title=self.tr("Selecciona la carpeta del Parche / Update (CUSA04957-patch)"),
             initialdir=self.var_patch_dir.get() or str(BASE_DIR),
         )
         if chosen:
@@ -1255,11 +1289,11 @@ class PES2017Launcher:
             sfo = read_sfo(game_path / "sce_sys" / "param.sfo")
             tid = sfo.get("TITLE_ID", "CUSA04957")
             ver = sfo.get("APP_VER", "01.00")
-            self.lbl_base_status.configure(text=f"✔ Juego Base listo: [{tid}] · v{ver}", fg=GREEN_OK)
+            self.lbl_base_status.configure(text=self.tr("✔ Juego Base listo: [{tid}] · v{ver}").format(tid=tid, ver=ver), fg=GREEN_OK)
             self.lbl_home_base.configure(text=f"✔  {game_path.name}  (v{ver})", fg=FG_WHITE)
         else:
-            self.lbl_base_status.configure(text="✖ Carpeta base no válida (falta eboot.bin / libc.prx)", fg=ERR_COLOR)
-            self.lbl_home_base.configure(text="✖  Falta carpeta CUSA04957", fg=ERR_COLOR)
+            self.lbl_base_status.configure(text=self.tr("✖ Carpeta base no válida (falta eboot.bin / libc.prx)"), fg=ERR_COLOR)
+            self.lbl_home_base.configure(text=self.tr("✖  Falta carpeta CUSA04957"), fg=ERR_COLOR)
 
         patch_ok = bool(patch_path and (patch_path / "eboot.bin").is_file())
         if patch_ok:
@@ -1268,36 +1302,36 @@ class PES2017Launcher:
             cpks = read_dpfilelist(patch_path / "DpFileList.bin")
             cpk_info = f" · {len(cpks)} DataPacks" if cpks else ""
             if use_patch:
-                self.lbl_patch_status.configure(text=f"✔ Parche ACTIVO: v{pver}{cpk_info}", fg=ACCENT)
-                self.lbl_home_patch.configure(text=f"{patch_path.name}  ·  Activo (v{pver}{cpk_info})", fg=GREEN_OK)
+                self.lbl_patch_status.configure(text=self.tr("✔ Parche ACTIVO: v{version}{cpk_info}").format(version=pver, cpk_info=cpk_info), fg=ACCENT)
+                self.lbl_home_patch.configure(text=self.tr("{name}  ·  Activo (v{version}{cpk_info})").format(name=patch_path.name, version=pver, cpk_info=cpk_info), fg=GREEN_OK)
             else:
-                self.lbl_patch_status.configure(text=f"ℹ Parche v{pver} desactivado (modo base)", fg=FG_MUTED)
-                self.lbl_home_patch.configure(text=f"{patch_path.name}  ·  Desactivado", fg=FG_MUTED)
+                self.lbl_patch_status.configure(text=self.tr("ℹ Parche v{version} desactivado (modo base)").format(version=pver), fg=FG_MUTED)
+                self.lbl_home_patch.configure(text=self.tr("{name}  ·  Desactivado").format(name=patch_path.name), fg=FG_MUTED)
         else:
-            self.lbl_patch_status.configure(text="ℹ Sin parche externo seleccionado", fg=FG_MUTED)
-            self.lbl_home_patch.configure(text="Sin parche externo", fg=FG_DIM)
+            self.lbl_patch_status.configure(text=self.tr("ℹ Sin parche externo seleccionado"), fg=FG_MUTED)
+            self.lbl_home_patch.configure(text=self.tr("Sin parche externo"), fg=FG_DIM)
 
         if not base_ok:
-            self.hero_badge_text = "FALTA BASE"
+            self.hero_badge_text = self.tr("FALTA BASE")
             self.hero_badge_color = ERR_COLOR
             self.play_enabled = False
         elif patch_ok and use_patch:
             psfo = read_sfo(patch_path / "sce_sys" / "param.sfo")
             pver = psfo.get("APP_VER", "01.07")
-            self.hero_badge_text = f"v{pver} LISTO"
+            self.hero_badge_text = self.tr("v{version} LISTO").format(version=pver)
             self.hero_badge_color = GREEN_OK
             self.play_enabled = True
         else:
             sfo = read_sfo(game_path / "sce_sys" / "param.sfo")
             ver = sfo.get("APP_VER", "01.00")
-            self.hero_badge_text = f"v{ver} LISTO"
+            self.hero_badge_text = self.tr("v{version} LISTO").format(version=ver)
             self.hero_badge_color = GREEN_OK
             self.play_enabled = True
         self.draw_hero()
 
     def on_save_clicked(self):
         self.save_settings()
-        self.lbl_status_bar.configure(text="✔  Ajustes guardados en pes2017.ini", fg=GREEN_OK)
+        self.lbl_status_bar.configure(text=self.tr("✔  Ajustes guardados en pes2017.ini"), fg=GREEN_OK)
 
     def ensure_boot_image(self, game_dir: Path, patch_dir: Path | None) -> Path:
         active_eboot = (patch_dir / "eboot.bin") if (patch_dir and (patch_dir / "eboot.bin").is_file()) else (game_dir / "eboot.bin")
@@ -1344,7 +1378,7 @@ class PES2017Launcher:
         cfg = self.save_settings()
         game_dir = Path(cfg["game_dir"])
         if not (game_dir / "eboot.bin").is_file():
-            messagebox.showerror("Error", "No se encontró eboot.bin en la carpeta del juego base.")
+            messagebox.showerror("Error", self.tr("No se encontró eboot.bin en la carpeta del juego base."))
             return
 
         patch_dir = Path(cfg["patch_dir"]) if (cfg["use_patch"] and cfg["patch_dir"]) else None
@@ -1352,9 +1386,11 @@ class PES2017Launcher:
             patch_dir = None
 
         self.play_enabled = False
-        self.play_label = "INICIANDO..."
+        self.launch_in_progress = True
+        self.cb_ui_lang.configure(state="disabled")
+        self.play_label = self.tr("INICIANDO...")
         self.draw_hero()
-        self.lbl_status_bar.configure(text="●  Preparando módulos de Pro Evolution Soccer 2017...", fg=ACCENT)
+        self.lbl_status_bar.configure(text=self.tr("●  Preparando módulos de Pro Evolution Soccer 2017..."), fg=ACCENT)
         self.root.update_idletasks()
 
         def worker():
@@ -1395,7 +1431,7 @@ class PES2017Launcher:
 
                 game_exe = OUT_DIR / "PES2017.exe"
                 if not game_exe.is_file():
-                    raise FileNotFoundError(f"No se encontró el ejecutable principal PES2017.exe en {OUT_DIR}")
+                    raise FileNotFoundError(self.tr("No se encontró el ejecutable principal PES2017.exe en {path}").format(path=OUT_DIR))
 
                 user_dir = Path(cfg["user_dir"])
                 if "\\PRO17PORT\\out\\user" in str(user_dir) and not user_dir.parent.is_dir():
@@ -1417,24 +1453,28 @@ class PES2017Launcher:
                 subprocess.Popen(cmd, cwd=str(ENGINE_DIR), env=env, creationflags=creation_flags)
                 self.root.after(0, self.on_launch_success)
             except Exception as exc:
-                self.root.after(0, lambda: self.on_launch_error(str(exc)))
+                self.root.after(0, lambda error=str(exc): self.on_launch_error(error))
 
         threading.Thread(target=worker, daemon=True).start()
 
     def on_launch_success(self):
+        self.launch_in_progress = False
+        self.cb_ui_lang.configure(state="readonly")
         self.play_enabled = True
-        self.play_label = "▶   JUGAR PES 2017"
+        self.play_label = self.tr("▶   JUGAR PES 2017")
         self.draw_hero()
-        self.lbl_status_bar.configure(text="✔  ¡Pro Evolution Soccer 2017 en ejecución!", fg=GREEN_OK)
+        self.lbl_status_bar.configure(text=self.tr("✔  ¡Pro Evolution Soccer 2017 en ejecución!"), fg=GREEN_OK)
         if self.var_close_on_launch.get():
             self.root.destroy()
 
     def on_launch_error(self, err_msg: str):
+        self.launch_in_progress = False
+        self.cb_ui_lang.configure(state="readonly")
         self.play_enabled = True
-        self.play_label = "▶   JUGAR PES 2017"
+        self.play_label = self.tr("▶   JUGAR PES 2017")
         self.draw_hero()
-        self.lbl_status_bar.configure(text=f"✖  Error al iniciar: {err_msg}", fg=ERR_COLOR)
-        messagebox.showerror("Error al lanzar PES 2017", err_msg)
+        self.lbl_status_bar.configure(text=self.tr("✖  Error al iniciar: {error}").format(error=err_msg), fg=ERR_COLOR)
+        messagebox.showerror(self.tr("Error al lanzar PES 2017"), err_msg)
 
 
 def main():

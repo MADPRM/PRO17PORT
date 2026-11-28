@@ -61,6 +61,7 @@
    * El launcher detectará automáticamente la versión base y el parche de actualización.
    * Configura tu resolución deseada, filtro anisotrópico y antialiasing (TAA o FSR).
    * Haz clic en **▶ JUGAR PES 2017**.
+   * Para cambiar el idioma de la interfaz, abre **Audio e Idioma → Comportamiento del Launcher → Idioma del launcher** y selecciona **English** o **Español**. El cambio se aplica y guarda automáticamente, incluidos los ajustes pendientes; el idioma del juego se configura por separado.
 4. **Controles durante el juego:**
    * `Insert` o `R3 + L2` (en el mando): Abre el menú flotante de ajustes gráficos y de sistema en vivo.
    * `F12`: Captura de pantalla en alta resolución (guardada en `out/user/screenshots`).

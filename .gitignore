@@ -7,6 +7,7 @@ user/
 pes2017_launcher.json
 CUSA*
 PES2017*
+!pes2017_lang.py
 *.cpk
 *.prx
 *.pkg
