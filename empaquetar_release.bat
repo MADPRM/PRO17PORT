@@ -40,6 +40,7 @@ echo [3/4] Copiando librerias DLL de Windows y scripts de inicio...
 copy /y "out\*.dll" "%STAGE_DIR%\out\" >nul
 copy /y "PES2017_Launcher.exe" "%STAGE_DIR%\" >nul
 copy /y "launcher_pes2017.py" "%STAGE_DIR%\" >nul
+copy /y "pes2017_lang.py" "%STAGE_DIR%\" >nul
 copy /y "jugar_pes2017.bat" "%STAGE_DIR%\" >nul
 copy /y "pes2017.ini" "%STAGE_DIR%\" >nul
 copy /y "README.md" "%STAGE_DIR%\" >nul
